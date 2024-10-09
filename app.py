@@ -1,117 +1,222 @@
 # app.py
+import random
 
-import streamlit as st
-import numpy as np
 import altair as alt
-from simulation.models import Validator, Investor
-from simulation.simulation import (
-    initialize_validators,
-    initialize_investors,
-    initial_delegation,
-    simulate_transactions,
-)
-from simulation.utils import prepare_validator_data, prepare_investor_data
+import pandas as pd
+import streamlit as st
 
-# Set the page configuration
-st.set_page_config(page_title="Validator Simulation", layout="wide")
+from simulation.constants import VOTE_AGREE, VOTE_DISAGREE, VOTE_IDLE, VOTE_TIMEOUT
+from simulation.simulation import TransactionSimulator
+from simulation.fee_mechanism import fee_structure
+from simulation.validator_selection import generate_validators_pool
+from simulation.models import Validator
+from simulation.utils import mermaid
 
-# Title and description
-st.title("Validator and Investor Stake Simulation")
 
-st.markdown(
-    """
-This simulation models a network of validators and investors in a staking system.
-Validators process transactions and receive rewards, while investors delegate their stakes
-to validators to earn a share of the rewards. Use the controls in the sidebar to adjust
-the simulation parameters and observe how the stakes evolve over time.
-"""
-)
+def main():
+    st.title("GenLayer Protocol Simulation")
 
-# Sidebar parameters
-st.sidebar.header("Simulation Parameters")
+    # Create tabs
+    tab1, tab2 = st.tabs(["Transaction Simulation", "Validator Stake Evolution"])
 
-N_validators = st.sidebar.slider(
-    "Number of Validators", min_value=5, max_value=50, value=10
-)
-N_investors = st.sidebar.slider(
-    "Number of Investors", min_value=10, max_value=200, value=50
-)
-min_stake_validator = st.sidebar.number_input(
-    "Minimum Validator Stake", min_value=1, value=50
-)
-max_stake_validator = st.sidebar.number_input(
-    "Maximum Validator Stake", min_value=1, value=100
-)
-min_stake_investor = st.sidebar.number_input(
-    "Minimum Investor Stake", min_value=1, value=10
-)
-max_stake_investor = st.sidebar.number_input(
-    "Maximum Investor Stake", min_value=1, value=50
-)
-num_transactions = st.sidebar.slider(
-    "Number of Transactions", min_value=10, max_value=500, value=100
-)
-reward = st.sidebar.number_input("Reward per Transaction", min_value=1, value=50)
-selection_method = st.sidebar.selectbox(
-    "Selection Method", options=["proportional", "logarithmic"], index=0
-)
+    with tab1:
+        transaction_simulation_tab()
 
-# Run the simulation
-validators = initialize_validators(
-    N_validators, min_stake_validator, max_stake_validator
-)
-investors = initialize_investors(N_investors, min_stake_investor, max_stake_investor)
-initial_delegation(investors, validators)
-simulate_transactions(
-    validators, investors, num_transactions, reward, method=selection_method
-)
+    with tab2:
+        stake_evolution_tab()
 
-# Prepare data for plotting
-validator_df = prepare_validator_data(validators)
-investor_df = prepare_investor_data(investors)
 
-# Plotting with Altair
-st.header("Simulation Results")
+def transaction_simulation_tab():
+    st.header("Transaction Simulation")
 
-st.subheader("Validators Stake Evolution")
-validator_chart = (
-    alt.Chart(validator_df)
-    .mark_line()
-    .encode(
-        x="Transaction",
-        y="Stake",
-        color="Validator",
-        tooltip=["Validator", "Transaction", "Stake"],
+    # Fee Parameter Inputs
+    st.subheader("Adjust Fee Structure")
+    leader_units = st.number_input(
+        "Leader Units (LU)", value=float(fee_structure["LU"]), min_value=0.0
     )
-    .interactive()
-)
-st.altair_chart(validator_chart, use_container_width=True)
-
-st.subheader("Investors Stake Evolution")
-investor_chart = (
-    alt.Chart(investor_df)
-    .mark_line()
-    .encode(
-        x="Transaction",
-        y="Stake",
-        color="Investor",
-        tooltip=["Investor", "Transaction", "Stake"],
+    validator_units = st.number_input(
+        "Validator Units (VU)", value=float(fee_structure["VU"]), min_value=0.0
     )
-    .interactive()
-)
-st.altair_chart(investor_chart, use_container_width=True)
+    leader_idle_penalty = st.number_input(
+        "Leader Idle Penalty",
+        value=float(fee_structure["leader_idle_penalty"]),
+        min_value=0.0,
+    )
+    leader_timeout_penalty = st.number_input(
+        "Leader Timeout Penalty",
+        value=float(fee_structure["leader_timeout_penalty"]),
+        min_value=0.0,
+    )
+    validator_violation_penalty = st.number_input(
+        "Validator Violation Penalty",
+        value=float(fee_structure["validator_violation_penalty"]),
+        min_value=0.0,
+    )
+    validator_idle_penalty = st.number_input(
+        "Validator Idle Penalty",
+        value=float(fee_structure["validator_idle_penalty"]),
+        min_value=0.0,
+    )
 
-# Additional explanation
-st.markdown(
-    """
-### How the Simulation Works
+    # Update fee structure
+    custom_fee_structure = {
+        "LU": leader_units,
+        "VU": validator_units,
+        "leader_idle_penalty": leader_idle_penalty,
+        "leader_timeout_penalty": leader_timeout_penalty,
+        "validator_violation_penalty": validator_violation_penalty,
+        "validator_idle_penalty": validator_idle_penalty,
+    }
 
-- **Validators**: Entities that process transactions and receive rewards. Each validator has an initial own stake and can receive delegated stakes from investors.
-- **Investors**: Entities that delegate their stakes to validators to earn a share of the rewards.
-- **Stake Delegation**: Investors choose validators to delegate their stakes based on expected returns. After each transaction, investors may reallocate their stakes to optimize returns.
-- **Transaction Processing**: In each transaction, 5 validators are selected based on their total stakes (own stake + delegated stake). They process the transaction and receive rewards, which are shared between the validators and their investors.
-- **Reward Distribution**: Validators keep 10% of the reward, and 90% is distributed among investors who have delegated to them, proportional to their stakes.
+    # Transaction Simulation Controls
+    st.subheader("Transaction Parameters")
+    leader_decision = st.selectbox(
+        "Leader Decision",
+        [VOTE_AGREE, VOTE_DISAGREE, VOTE_IDLE, VOTE_TIMEOUT],
+        format_func=lambda x: {
+            VOTE_AGREE: "Agree (A)",
+            VOTE_DISAGREE: "Disagree (D)",
+            VOTE_IDLE: "Idle (I)",
+            VOTE_TIMEOUT: "Timeout (T)",
+        }[x],
+        index=0,
+    )
+    appeal = st.checkbox("Enable Appeal", value=True)
+    round_number = st.number_input("Round Number (r)", min_value=0, value=0, step=1)
 
-Use the controls in the sidebar to adjust parameters like the number of validators and investors, the stakes, the number of transactions, and the reward per transaction. Observe how these changes affect the stake evolution of both validators and investors.
-"""
-)
+    # Simulate Button
+    if st.button("Simulate Transaction"):
+        # Run the simulation
+        all_validators = generate_validators_pool()
+        simulator = TransactionSimulator(
+            all_validators=all_validators,
+            r=round_number,
+            leader_decision=leader_decision,
+            appeal=appeal,
+            fee_structure=custom_fee_structure,
+        )
+        simulator.run_simulation()
+
+        # Display Output
+        st.subheader("Transaction Path")
+        for step in simulator.transaction_path:
+            st.write(step)
+
+        st.subheader("Final Fee Distribution")
+        total_fees = []
+        leader_total = simulator.leader.rewards - simulator.leader.penalties
+        total_fees.append(
+            f"Leader (Validator {simulator.leader.id}) net fee: {leader_total} "
+            f"(Rewards: {simulator.leader.rewards}, Penalties: {simulator.leader.penalties})"
+        )
+        for validator in simulator.validators:
+            validator_total = validator.rewards - validator.penalties
+            total_fees.append(
+                f"Validator {validator.id} net fee: {validator_total} "
+                f"(Rewards: {validator.rewards}, Penalties: {validator.penalties})"
+            )
+        for fee in total_fees:
+            st.write(fee)
+
+        # Display the Mermaid graph
+        st.subheader("Transaction Flowchart")
+        mermaid_code = simulator.generate_mermaid_code()
+        print(mermaid_code)
+        mermaid(mermaid_code)
+
+
+def stake_evolution_tab():
+    st.header("Validator Stake Evolution")
+
+    # Simulation Settings
+    st.subheader("Simulation Settings")
+    num_transactions = st.number_input(
+        "Number of Transactions", min_value=1, value=100, step=1
+    )
+    initial_total_supply = st.number_input(
+        "Total Supply", min_value=1.0, value=42000000000.0
+    )
+    validator_count = st.number_input(
+        "Number of Validators", min_value=1, value=1000, step=1
+    )
+
+    # Optionally, allow adjusting initial stakes distribution
+    stake_distribution = st.selectbox(
+        "Stake Distribution", ["Dirichlet (Default)", "Uniform"]
+    )
+
+    # Run Batch Simulation Button
+    if st.button("Run Batch Simulation"):
+        # Initialize validators
+        if stake_distribution == "Dirichlet (Default)":
+            all_validators = generate_validators_pool(
+                N=int(validator_count), total_supply=initial_total_supply
+            )
+        else:
+            # Implement uniform stake distribution if needed
+            pass
+
+        # Initialize validators_list
+        validators_list = [Validator(id=val[0], stake=val[1]) for val in all_validators]
+
+        # Data structure to store stakes over time
+        stake_history = pd.DataFrame()
+
+        # Simulate multiple transactions
+        for tx in range(int(num_transactions)):
+            # Run a transaction simulation
+            simulator = TransactionSimulator(
+                all_validators=all_validators,
+                r=0,  # Adjust as needed
+                leader_decision=VOTE_AGREE,  # Or randomize
+                appeal=True,
+                fee_structure=fee_structure,  # Use default or allow customization
+                validators_list=validators_list,  # Pass the existing validators_list
+            )
+            simulator.run_simulation()
+
+            # Record stakes at this point
+            stakes = {validator.id: validator.stake for validator in validators_list}
+            stakes["transaction"] = tx
+            stake_history = stake_history.append(stakes, ignore_index=True)
+
+        # Melt the DataFrame for Altair plotting
+        stake_history_melted = stake_history.melt(
+            id_vars=["transaction"], var_name="validator", value_name="stake"
+        )
+
+        # Sample a subset of validators for plotting
+        sample_size = min(20, len(all_validators))
+        sampled_validator_ids = random.sample(
+            [val[0] for val in all_validators], sample_size
+        )
+        stake_history_sampled = stake_history_melted[
+            stake_history_melted["validator"].isin(sampled_validator_ids)
+        ]
+
+        # Plot with Altair
+        st.subheader("Stake Evolution Over Time")
+        chart = (
+            alt.Chart(stake_history_sampled)
+            .mark_line()
+            .encode(
+                x="transaction:Q",
+                y="stake:Q",
+                color="validator:N",
+                tooltip=["validator:N", "stake:Q"],
+            )
+            .interactive()
+        )
+
+        st.altair_chart(chart, use_container_width=True)
+
+        # Display final stakes
+        st.subheader("Final Validator Stakes")
+        final_stakes = stake_history.iloc[-1].drop("transaction")
+        final_stakes_df = final_stakes.to_frame(name="Stake").reset_index()
+        final_stakes_df = final_stakes_df.rename(columns={"index": "Validator ID"})
+        st.dataframe(final_stakes_df)
+
+
+if __name__ == "__main__":
+    main()
