@@ -1,11 +1,19 @@
 # app.py
+
+# TODO: WIP, this file currently does not work!!!
+
 import random
 
 import altair as alt
 import pandas as pd
 import streamlit as st
 
-from simulation.constants import VOTE_AGREE, VOTE_DISAGREE, VOTE_IDLE, VOTE_TIMEOUT
+from simulation.config_constants import (
+    VOTE_AGREE,
+    VOTE_DISAGREE,
+    VOTE_IDLE,
+    VOTE_TIMEOUT,
+)
 from simulation.simulation import TransactionSimulator
 from simulation.fee_mechanism import fee_structure
 from simulation.validator_selection import generate_validators_pool
@@ -17,7 +25,9 @@ def main():
     st.title("GenLayer Protocol Simulation")
 
     # Create tabs
-    tab1, tab2 = st.tabs(["Transaction Simulation", "Validator Stake Evolution"])
+    tab1, tab2 = st.tabs(
+        ["Transaction Simulation", "Validator Stake Evolution", "Test Suite"]
+    )
 
     with tab1:
         transaction_simulation_tab()
