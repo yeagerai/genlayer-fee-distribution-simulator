@@ -2,7 +2,8 @@
 # Those should be set in config tab of streamlit
 
 FINALITY_WINDOW_MINS = 30
-MAX_NUM_VALS = 100
+MIN_NUM_VALS = 5
+MAX_NUM_VALS = 1000
 GENS_PER_TIME_UNIT = 1
 TIME_UNIT = 1  # in seconds
 SUPPLY = 42000000000

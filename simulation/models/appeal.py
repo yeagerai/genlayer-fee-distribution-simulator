@@ -1,7 +1,7 @@
 # simulation/models/appeal.py
 
 from simulation.utils import generate_ethereum_address
-from simulation.models.enums import AppealType
+from simulation.models.enums import AppealType, LeaderResult
 from simulation.models.participant import Participant
 
 
@@ -10,6 +10,7 @@ class Appeal:
         self,
         appeal_type: AppealType,
         bond: int,
+        leader_result: LeaderResult | None,
         voting_vector: list[str] | None = None,
     ):
         self.id = generate_ethereum_address()
