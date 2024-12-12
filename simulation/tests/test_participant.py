@@ -1,4 +1,5 @@
 import pytest
+
 from simulation.models.participant import Participant
 from simulation.models.enums import Role
 
