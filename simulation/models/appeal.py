@@ -4,6 +4,9 @@ from simulation.utils import generate_ethereum_address
 from simulation.models.enums import AppealType, LeaderResult
 from simulation.models.participant import Participant
 
+# TODO: if appeal fails it reduces the finality window
+# TODO: when there is a new leader receipt, then it restarts the finality window
+
 
 class Appeal:
     def __init__(

@@ -4,7 +4,11 @@
 from dataclasses import dataclass
 
 from simulation.errors import OutOfGasError
-from simulation.utils import generate_validators_per_round_sequence
+from simulation.utils import (
+    generate_validators_per_round_sequence,
+    compute_appeal_rounds_budget,
+    compute_rotation_budget,
+)
 
 
 @dataclass
@@ -16,8 +20,8 @@ class PresetLeaf:
     Gas costs are fixed and known at initialization.
     """
 
-    initial_leader_budget: int = 0
-    initial_validator_budget: int = 0
+    leader_time_units: int = 0
+    validator_time_units: int = 0
     rotation_budget: list[int] = None
     appeal_rounds_budget: int = None
 
@@ -29,8 +33,8 @@ class PresetLeaf:
             int: Sum of all gas costs in this preset
         """
         return (
-            self.initial_leader_budget
-            + self.initial_validator_budget
+            self.leader_time_units
+            + self.validator_time_units
             + sum(self.rotation_budget)
             + self.appeal_rounds_budget
         )
@@ -45,8 +49,8 @@ class PresetBranch:
     Includes both direct gas costs and references to other message patterns.
     """
 
-    initial_leader_budget: int = 0
-    initial_validator_budget: int = 0
+    leader_time_units: int = 0
+    validator_time_units: int = 0
     rotation_budget: list[int] = None
     appeal_rounds_budget: int = None
     internal_messages_budget_guess: dict[str, str] = (
@@ -62,8 +66,8 @@ class PresetBranch:
             int: Sum of direct gas costs (excluding referenced messages)
         """
         return (
-            self.initial_leader_budget
-            + self.initial_validator_budget
+            self.leader_time_units
+            + self.validator_time_units
             + sum(self.rotation_budget)
             + self.appeal_rounds_budget
             + sum(self.external_messages_budget_guess)
@@ -71,6 +75,8 @@ class PresetBranch:
 
 
 class TransactionBudget:
+    # TODO: in the future, add leader storage budget for the rollup
+    # TODO: in the future addTransaction cost for the rollup
     """
     Manages the complete gas budget for a transaction.
 
@@ -80,10 +86,10 @@ class TransactionBudget:
 
     def __init__(
         self,
-        initial_leader_budget: int,
-        initial_validator_budget: int,
-        rotation_budget: list[int],
-        appeal_rounds_budget: int,
+        leader_time_units: int,
+        validator_time_units: int,
+        rotations_per_round: list[int],
+        appeal_rounds: int,
         preset_leafs: dict[str, PresetLeaf] = None,
         preset_branches: dict[str, PresetBranch] = None,
         total_internal_messages_budget: int = 0,
@@ -106,15 +112,24 @@ class TransactionBudget:
             ValueError: If rotation and appeal budgets have different lengths
         """
         # Validate budget lists
-        num_possible_rounds = len(generate_validators_per_round_sequence())
-        if len(rotation_budget) != num_possible_rounds:
+        validators_per_round = generate_validators_per_round_sequence()
+        num_possible_rounds = len(validators_per_round)
+        if len(rotations_per_round) != num_possible_rounds:
             raise ValueError(f"Rotation budgets must have length {num_possible_rounds}")
 
         # Direct budgets
-        self.initial_leader_budget = initial_leader_budget
-        self.initial_validator_budget = initial_validator_budget
-        self.rotation_budget = rotation_budget
-        self.appeal_rounds_budget = appeal_rounds_budget
+        self.leader_time_units = leader_time_units
+        self.validator_time_units = validator_time_units
+        self.rotation_budget = compute_rotation_budget(
+            leader_time_units=leader_time_units,
+            validator_time_units=validator_time_units,
+            rotations_per_round=rotations_per_round,
+        )
+        self.appeal_rounds_budget = compute_appeal_rounds_budget(
+            leader_time_units=leader_time_units,
+            validator_time_units=validator_time_units,
+            num_rounds=appeal_rounds,
+        )
 
         # Preset structures
         self.preset_leafs = preset_leafs or {}
@@ -126,11 +141,11 @@ class TransactionBudget:
 
         # Calculate total available gas
         self.total_gas = (
-            initial_leader_budget
-            + initial_validator_budget
-            + sum(rotation_budget)
-            + appeal_rounds_budget
-            + total_internal_messages_budget
+            self.leader_time_units
+            + self.validator_time_units
+            + sum(self.rotation_budget)
+            + self.appeal_rounds_budget
+            + self.total_internal_messages_budget
             + sum(self.external_messages_budget_guess)
         )
 

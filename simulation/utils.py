@@ -59,7 +59,9 @@ def set_random_seed(seed_value: int) -> None:
     np.random.seed(seed_value)
 
 
-def calculate_appeal_rounds_budget(num_rounds: int) -> int:
+def compute_appeal_rounds_budget(
+    leader_time_units: int, validator_time_units: int, num_rounds: int
+) -> int:
     """
     Helper function to calculate total appeal rounds budget.
 
@@ -74,6 +76,21 @@ def calculate_appeal_rounds_budget(num_rounds: int) -> int:
     # so each type has a different cost for the user, so just with the number of rounds
     # we must compute the maximum cost so the appeal type that is most expensive
 
-    max_cost = ...
+    leader_appeal_cost = ...
+    validator_appeal_cost = ...
+    tribunal_appeal_cost = ...
+
+    max_cost = max(leader_appeal_cost, validator_appeal_cost, tribunal_appeal_cost)
 
     return num_rounds * max_cost
+
+
+def compute_rotation_budget(
+    leader_time_units: int, validator_time_units: int, rotations_per_round: list[int]
+) -> int:
+    validators_per_round = generate_validators_per_round_sequence()
+    if len(rotations_per_round) != len(validators_per_round):
+        raise ValueError("Rotations per round must match validators per round")
+    return sum(
+        rotations_per_round * validators_per_round * [validator_time_units]
+    ) + sum(rotations_per_round * [leader_time_units])
