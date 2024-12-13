@@ -4,6 +4,7 @@
 from dataclasses import dataclass
 
 from simulation.errors import OutOfGasError
+from simulation.utils import generate_validators_per_round_sequence
 
 
 @dataclass
@@ -18,14 +19,7 @@ class PresetLeaf:
     initial_leader_budget: int = 0
     initial_validator_budget: int = 0
     rotation_budget: list[int] = None
-    appeal_rounds_budget: list[int] = None
-
-    def __post_init__(self):
-        """Initialize default values for optional fields."""
-        if self.rotation_budget is None:
-            self.rotation_budget = [0] * 7
-        if self.appeal_rounds_budget is None:
-            self.appeal_rounds_budget = [0] * 7
+    appeal_rounds_budget: int = None
 
     def compute_total_gas(self) -> int:
         """
@@ -38,7 +32,7 @@ class PresetLeaf:
             self.initial_leader_budget
             + self.initial_validator_budget
             + sum(self.rotation_budget)
-            + sum(self.appeal_rounds_budget)
+            + self.appeal_rounds_budget
         )
 
 
@@ -54,22 +48,11 @@ class PresetBranch:
     initial_leader_budget: int = 0
     initial_validator_budget: int = 0
     rotation_budget: list[int] = None
-    appeal_rounds_budget: list[int] = None
+    appeal_rounds_budget: int = None
     internal_messages_budget_guess: dict[str, str] = (
         None  # message_key -> reference_key
     )
     external_messages_budget_guess: list[int] = None
-
-    def __post_init__(self):
-        """Initialize default values for optional fields."""
-        if self.rotation_budget is None:
-            self.rotation_budget = [0] * 7
-        if self.appeal_rounds_budget is None:
-            self.appeal_rounds_budget = [0] * 7
-        if self.internal_messages_budget_guess is None:
-            self.internal_messages_budget_guess = {}
-        if self.external_messages_budget_guess is None:
-            self.external_messages_budget_guess = []
 
     def compute_own_gas(self) -> int:
         """
@@ -82,7 +65,7 @@ class PresetBranch:
             self.initial_leader_budget
             + self.initial_validator_budget
             + sum(self.rotation_budget)
-            + sum(self.appeal_rounds_budget)
+            + self.appeal_rounds_budget
             + sum(self.external_messages_budget_guess)
         )
 
@@ -100,7 +83,7 @@ class TransactionBudget:
         initial_leader_budget: int,
         initial_validator_budget: int,
         rotation_budget: list[int],
-        appeal_rounds_budget: list[int],
+        appeal_rounds_budget: int,
         preset_leafs: dict[str, PresetLeaf] = None,
         preset_branches: dict[str, PresetBranch] = None,
         total_internal_messages_budget: int = 0,
@@ -113,7 +96,7 @@ class TransactionBudget:
             initial_leader_budget: Gas allocated for initial leader operations
             initial_validator_budget: Gas allocated for initial validator operations
             rotation_budget: Gas allocated for each potential rotation
-            appeal_rounds_budget: Gas allocated for each potential appeal
+            appeal_rounds_budget: Gas allocated for appeal rounds
             preset_leafs: Dictionary of leaf presets for message patterns
             preset_branches: Dictionary of branch presets for message patterns
             total_internal_messages_budget: Total gas limit for internal messages
@@ -123,8 +106,9 @@ class TransactionBudget:
             ValueError: If rotation and appeal budgets have different lengths
         """
         # Validate budget lists
-        if len(rotation_budget) != len(appeal_rounds_budget):
-            raise ValueError("Rotation and appeal budgets must have same length")
+        num_possible_rounds = len(generate_validators_per_round_sequence())
+        if len(rotation_budget) != num_possible_rounds:
+            raise ValueError(f"Rotation budgets must have length {num_possible_rounds}")
 
         # Direct budgets
         self.initial_leader_budget = initial_leader_budget
@@ -145,7 +129,7 @@ class TransactionBudget:
             initial_leader_budget
             + initial_validator_budget
             + sum(rotation_budget)
-            + sum(appeal_rounds_budget)
+            + appeal_rounds_budget
             + total_internal_messages_budget
             + sum(self.external_messages_budget_guess)
         )
@@ -250,7 +234,7 @@ class TransactionBudget:
 
         return (
             self.rotation_budget[round_number],
-            self.appeal_rounds_budget[round_number],
+            self.appeal_rounds_budget,
         )
 
     def __repr__(self) -> str:

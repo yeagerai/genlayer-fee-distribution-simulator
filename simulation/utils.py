@@ -57,3 +57,23 @@ def set_random_seed(seed_value: int) -> None:
     """
     random.seed(seed_value)
     np.random.seed(seed_value)
+
+
+def calculate_appeal_rounds_budget(num_rounds: int) -> int:
+    """
+    Helper function to calculate total appeal rounds budget.
+
+    Args:
+        num_rounds: Number of appeal rounds supported (security budget set by the user)
+
+    Returns:
+        int: Total gas budget needed for appeal rounds
+    """
+    # That should take into account that appeals escalate validator count
+    # and that there are three different types of appeals
+    # so each type has a different cost for the user, so just with the number of rounds
+    # we must compute the maximum cost so the appeal type that is most expensive
+
+    max_cost = ...
+
+    return num_rounds * max_cost
