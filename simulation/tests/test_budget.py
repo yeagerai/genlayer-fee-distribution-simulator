@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import patch
 
-from simulation.models.transaction_budget import (
-    TransactionBudget,
+from simulation.models.budget import (
+    Budget,
     PresetLeaf,
     PresetBranch,
 )
@@ -21,7 +21,7 @@ def mock_validator_sequence():
 
 
 def test_total_gas_calculation():
-    budget = TransactionBudget(
+    budget = Budget(
         initial_leader_budget=100,
         initial_validator_budget=200,
         rotation_budget=[50, 50, 50],
@@ -60,7 +60,7 @@ def test_total_gas_calculation():
 @pytest.fixture
 def simple_budget():
     """Basic budget setup for testing."""
-    return TransactionBudget(
+    return Budget(
         initial_leader_budget=100,
         initial_validator_budget=200,
         rotation_budget=[50, 50, 50],
@@ -96,7 +96,7 @@ def preset_budget():
         external_messages_budget_guess=[50, 50],
     )
 
-    return TransactionBudget(
+    return Budget(
         initial_leader_budget=100,
         initial_validator_budget=200,
         rotation_budget=[50, 50, 50],  # Changed to length 3
@@ -184,7 +184,7 @@ def test_round_budget_access(simple_budget):
 def test_invalid_budget_initialization():
     """Test validation of budget initialization."""
     with pytest.raises(ValueError):
-        TransactionBudget(
+        Budget(
             initial_leader_budget=100,
             initial_validator_budget=200,
             rotation_budget=[50, 50],

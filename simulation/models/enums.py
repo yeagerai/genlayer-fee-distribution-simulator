@@ -8,6 +8,9 @@ class Role(Enum):
     VALIDATOR = "validator"
     APPEALANT = "appealant"
 
+class Status(Enum):
+    FINAL = "final"
+    NONFINAL = "nonfinal"
 
 class LeaderResult(Enum):
     RECEIPT = "R"
@@ -27,3 +30,7 @@ class AppealType(Enum):
     TRIBUNAL = "T"
     LEADER = "L"
     VALIDATOR = "V"
+
+class RoundType(Enum):
+    APPEAL = "A"
+    ROTATE = "R"
