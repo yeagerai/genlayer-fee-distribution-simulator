@@ -6,7 +6,7 @@ from simulation.models.round import InitialRound, RotationRound, Round, LeaderAp
 from simulation.models.enums import AppealType, Vote, Status, LeaderResult, RoundType
 from simulation.models.participant import Participant
 from simulation.models.reward_manager import RewardManager
-from simulation.utils import compute_next_step, should_finalize
+from simulation.utils import compute_next_step, should_finalize, generate_validators_per_round_sequence
 
 def compute_next_step_after(func):
     def wrapper(self, *args, **kwargs):
@@ -25,6 +25,7 @@ class Transaction:
 
         self.id = generate_ethereum_address()
         self.reward_manager = RewardManager(budget, initial_validator_pool) # TODO: load from old state
+        self.num_vals_per_round = generate_validators_per_round_sequence()
         self.rounds: list[Round] = []
         self.status = Status.NONFINAL
         self.automatic_next_step = None
@@ -33,6 +34,8 @@ class Transaction:
     def start(self, leader_result: str, voting_vector: list[Vote]) -> None:
         if len(self.rounds) > 0:
             raise ValueError("Transaction already started")
+        if len(voting_vector) != self.num_vals_per_round[0]:
+            raise ValueError("Invalid voting vector length")
 
         first_round = InitialRound(
             round_number=1,
@@ -55,6 +58,9 @@ class Transaction:
         if self.final:
             raise ValueError("Transaction is final, cannot add new rounds")
         
+        if len(voting_vector) != self.num_vals_per_round[len(self.rounds)]:
+            raise ValueError("Invalid voting vector length")
+
         if self.automatic_next_step != RoundType.ROTATE:
             raise ValueError("Transaction is not in rotate state")
 
@@ -72,6 +78,10 @@ class Transaction:
     def appeal(self, appealant_id: str, appeal_type: AppealType, bond: int, leader_result: LeaderResult, voting_vector: list[Vote]) -> None:
         if self.final:
             raise ValueError("Transaction is final, cannot appeal")
+
+        if len(voting_vector) != self.num_vals_per_round[len(self.rounds)]:
+            raise ValueError("Invalid voting vector length")
+
         if self.automatic_next_step != RoundType.APPEAL:
             raise ValueError("Transaction is not in appeal state")
 
@@ -119,12 +129,6 @@ def main():
         p.id: p for p in [Participant() for _ in range(1000)]
     }
 
-    # Configure message presets
-    messages_per_preset = {
-        "default": 1,
-        "deploy": 1,
-        "complex": 3,
-    }
 
     # Create transaction budget
     tx_budget = Budget(
@@ -132,8 +136,6 @@ def main():
         validator_time_units=60,
         rotations_per_round=[20, 20, 20, 20, 20],
         appeal_rounds=5,
-        preset_leafs={},
-        preset_branches={},
         total_internal_messages_budget=1000,
     )
 
@@ -141,27 +143,27 @@ def main():
     tx = Transaction(
         transaction_budget=tx_budget,
         initial_validator_pool=initial_validators_pool,
-        messages_per_preset=messages_per_preset
     )
 
     # Simulate first round
-    first_round = tx.start(
+    tx.start(
         leader_result="R",
         voting_vector=[Vote.A, Vote.D, Vote.A, Vote.A, Vote.D]
     )
     tx.print_current_rewards()
 
     # Simulate appeal
-    first_round.start_appeal(
-        appealant=list(initial_validators_pool.values())[0],
+    tx.appeal(
+        appealant_id=list(initial_validators_pool.values())[0].id,
         appeal_type=AppealType.VALIDATOR,
         bond=100,
+        leader_result="D",
         voting_vector=[Vote.A, Vote.A, Vote.D, Vote.A, Vote.D]
     )
     tx.print_current_rewards()
 
     # Add new round
-    tx.add_new_round(
+    tx.rotate(
         leader_result="D",
         voting_vector=[Vote.D, Vote.D, Vote.A, Vote.D, Vote.A]
     )

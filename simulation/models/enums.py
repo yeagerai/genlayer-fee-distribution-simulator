@@ -32,5 +32,11 @@ class AppealType(Enum):
     VALIDATOR = "V"
 
 class RoundType(Enum):
+    INITIAL = "I"
     APPEAL = "A"
     ROTATE = "R"
+
+class RewardType(Enum):
+    LEADER = 0
+    VALIDATOR = 1
+    APPEALANT = 2
