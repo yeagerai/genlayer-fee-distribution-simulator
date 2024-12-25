@@ -1,79 +1,73 @@
 # Optimistic Democracy Consensus Simulator
 
-A simulation framework for Optimistic Democracy consensus mechanism. The project includes both a backend simulation engine and a Streamlit-based frontend interface.
+A simulation framework for testing and analyzing the Optimistic Democracy consensus mechanism. The project provides tools for simulating transaction processing, reward distribution, and appeal mechanisms.
 
-## Features
+## Core Concepts
 
-The simulator provides four main interfaces through its Streamlit frontend:
+The simulator models several key components of the Optimistic Democracy system:
 
-1. **Manual Transaction Runner**
-   - Execute individual transactions
-   - Step through consensus rounds
-   - Visualize participant interactions
-   - Track gas usage in real-time
+1. **Transactions**
+   - Managed through rounds of consensus
+   - Support for initial, rotation, and appeal rounds
+   - Automatic state progression based on voting outcomes
 
-2. **Statistical Simulator**
-   - Run multiple transactions with varying parameters
-   - Generate performance metrics
-   - Analyze success rates and gas usage patterns
-   - Export simulation results
+2. **Participants**
+   - Dynamic role assignment (leader, validator)
+   - Reward tracking per round
+   - Support for multiple rounds participation
 
-3. **Configuration Manager**
-   - Adjust system parameters
-   - Set validator counts and thresholds
-   - Configure gas limits and preset patterns
+3. **Reward System**
+   - Time-unit based rewards and penalties
+   - Budget management per transaction
+   - Role-specific reward distribution
 
-4. **Test Suite Runner**
-   - Execute predefined test scenarios
-   - Test edge cases and failure modes
-   - Validate consensus mechanism
-   - Generate comprehensive reports
+4. **Appeal Mechanism**
+   - Support for leader, validator, and tribunal appeals
+   - Bond-based appeal system
+   - Success calculation based on voting outcomes
 
-## Architecture
-
-The simulator backend is organized into several key components:
+## Project Structure
 
 ```
 simulation/
-├── init.py
-├── config_constants.py # System-wide constants
-├── errors.py # Custom exceptions
-├── utils.py # Utility functions
 ├── models/
-│ ├── init.py
-│ ├── enums.py # System enums (Role, Vote, etc.)
-│ ├── participant.py # Participant model
-│ ├── appeal.py # Appeal mechanism
-│ ├── round.py # Round management
-│ └── transaction_budget.py # Gas budget management
-└── tests/
-├── init.py
-├── test_participant.py
-├── test_appeal.py
-├── test_round.py
-└── test_transaction_budget.py
+│   ├── budget.py           # Transaction budget management
+│   ├── enums.py           # System enumerations
+│   ├── participant.py      # Participant state and behavior
+│   ├── reward_manager.py   # Reward distribution logic
+│   ├── round.py           # Round types and management
+│   └── transaction.py      # Transaction orchestration
+├── tests/
+│   ├── test_budget.py
+│   ├── test_participant.py
+│   ├── test_round.py
+│   └── test_transaction.py
+├── utils.py               # Helper functions
+└── config_constants.py    # System configuration
 ```
 
+## Key Features
 
-### Core Components
-
-- **Participant**: Represents actors in the system with different roles (leader, validator, appealant)
-- **Appeal**: Manages the appeal process with different types and voting mechanisms
-- **Round**: Handles consensus rounds with validator rotation and voting
-- **TransactionBudget**: Manages gas costs through preset patterns and budget tracking
-- **OptTransaction**: Represents a transaction in the system, including its gas cost and budget allocation
+- **Dynamic Validator Selection**: Automatically scales validator count between rounds
+- **Flexible Round Management**: Supports multiple round types with different voting mechanisms
+- **Comprehensive Reward System**: Tracks and distributes rewards based on participant behavior
+- **Automated State Transitions**: Determines next steps based on voting outcomes
+- **Test Coverage**: Extensive test suite for all components
 
 ## Testing
 
-The project uses pytest for testing. To run all tests:
+Run the test suite using pytest:
 
-```
+```bash
 pytest
 ```
 
-To run a specific test:
+To run it with prints:
 
-```
-pytest tests/test_participant.py
+```bash
+pytest -s
 ```
 
+## Contributing
+
+Contributions are welcome! Please ensure tests pass and add new tests for new functionality.
