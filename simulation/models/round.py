@@ -27,8 +27,8 @@ class Round:
         self.id = generate_ethereum_address()
         self.round_number = round_number
         self.leader_result = leader_result
-        self.voting_vector = voting_vector
         self.leader_id, self.validator_ids = select_leader_and_validators(self.round_number, reward_manager.initial_validator_pool, self.id)
+        self.voting_vector = {participant_id: vote for participant_id, vote in zip(self.validator_ids, voting_vector)}
         self.majority = calculate_majority(self.voting_vector)
 
 
@@ -40,24 +40,37 @@ class InitialRound(Round):
 
     @spend_budget_before_rewards
     def distribute_rewards(self, reward_manager: RewardManager):
-        # Add rewards for validators
-        for participant_id in self.validator_ids:
-            reward_manager.add_rewards_to_participant(
-                reward_type=RewardType.VALIDATOR,
-                round_number=self.round_number,
-                round_id=self.id,
-                participant_id=participant_id,
-                round_type=self.type
-            )
-        
-        # Add rewards for leader
+        if self.majority:
+            for participant_id in self.validator_ids:
+                if self.voting_vector[participant_id] == self.majority:
+                    reward_manager.add_rewards_to_participant(
+                        reward_type=RewardType.VALIDATOR,
+                        participant_output=self.majority,
+                        round_number=self.round_number,
+                        round_id=self.id,
+                        participant_id=participant_id,
+                        round_type=self.type
+                    )
+        else:
+            for participant_id in self.validator_ids:
+                reward_manager.add_rewards_to_participant(
+                    reward_type=RewardType.VALIDATOR,
+                    participant_output=None,
+                    round_number=self.round_number,
+                    round_id=self.id,
+                    participant_id=participant_id,
+                    round_type=self.type
+                )
+
         reward_manager.add_rewards_to_participant(
             reward_type=RewardType.LEADER,
+            participant_output=self.leader_result,
             round_number=self.round_number,
             round_id=self.id,
             participant_id=self.leader_id,
             round_type=self.type
         )
+        
 class RotationRound(Round):
     def __init__(self, round_number: int, reward_manager: RewardManager, *args, **kwargs):
         super().__init__(round_number, reward_manager, *args, **kwargs)

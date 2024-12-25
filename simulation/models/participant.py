@@ -1,5 +1,6 @@
 # simulation/models/participant.py
 
+import random
 from dataclasses import dataclass
 from simulation.utils import generate_ethereum_address
 from simulation.models.enums import Role
@@ -11,9 +12,13 @@ class RoundData:
     reward: int
 
 class Participant:
-    def __init__(self, id: str | None = None):
+    def __init__(self, id: str | None = None, stake: int | None = None):
         self.id = id if id else generate_ethereum_address()
         self.rounds: dict[str,RoundData] = {}
+        if stake:
+            self.stake = stake
+        else:
+            self.stake = random.randint(100000, 10000000)
 
     def add_to_round(self, round_id: str, role: Role) -> None:
         self.rounds[round_id] = RoundData(round_id, role, 0)

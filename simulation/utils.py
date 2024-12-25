@@ -71,7 +71,7 @@ def compute_rotation_budget(
 def calculate_majority(voting_vector: list[Vote]) -> Vote | None:
     """Calculate the majority vote result."""
     vote_counts = {vote: 0 for vote in Vote}
-    for vote in voting_vector:
+    for vote in voting_vector.values():
         vote_counts[vote] += 1
 
     total_votes = len(voting_vector)
