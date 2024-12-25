@@ -3,7 +3,7 @@
 import random
 
 from simulation.config_constants import MAX_NUM_VALS, MIN_NUM_VALS
-from simulation.models.enums import Vote, Role
+from simulation.models.enums import Vote, Role, RoundType
 
 
 def generate_ethereum_address() -> str:
@@ -115,7 +115,8 @@ def select_leader_and_validators(round_number: int, participants: dict, round_id
     return leader_id, validator_ids
 
 def compute_next_step(round):
-    ...
+    if not round.majority:
+        return RoundType.ROTATE
 
 def should_finalize(round):
     ...

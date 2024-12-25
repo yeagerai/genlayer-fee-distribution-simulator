@@ -21,6 +21,8 @@ class Participant:
             self.stake = random.randint(100000, 10000000)
 
     def add_to_round(self, round_id: str, role: Role) -> None:
+        if round_id in self.rounds and self.rounds[round_id].role == Role.LEADER:
+            return
         self.rounds[round_id] = RoundData(round_id, role, 0)
 
     def get_total_rewards(self) -> int:

@@ -1,9 +1,6 @@
 # simulation/models/round.py
 
-from datetime import datetime, timedelta
-
-from simulation.config_constants import FINALITY_WINDOW_MINS
-from simulation.models.enums import Vote, AppealType, LeaderResult, RoundType, RewardType
+from simulation.models.enums import Vote, AppealType, LeaderResult, RoundType, RewardType, Role
 from simulation.utils import generate_ethereum_address, calculate_majority, select_leader_and_validators
 from simulation.models.reward_manager import RewardManager
 
@@ -23,8 +20,10 @@ class Round:
         reward_manager: RewardManager,
         leader_result: LeaderResult | None = None,
         voting_vector: list[Vote] | None = None,
+        previous_round_id: str | None = None,
     ):
         self.id = generate_ethereum_address()
+        self.previous_round_id = previous_round_id
         self.round_number = round_number
         self.leader_result = leader_result
         self.leader_id, self.validator_ids = select_leader_and_validators(self.round_number, reward_manager.initial_validator_pool, self.id)
@@ -79,7 +78,51 @@ class RotationRound(Round):
         self.distribute_rewards(reward_manager)
 
     @spend_budget_before_rewards
-    def distribute_rewards(self, reward_manager: RewardManager): ...
+    def distribute_rewards(self, reward_manager: RewardManager): 
+        if self.majority:
+            for participant_id in self.validator_ids:
+                if self.voting_vector[participant_id] == self.majority:
+                    reward_manager.add_rewards_to_participant(
+                        reward_type=RewardType.VALIDATOR,
+                        participant_output=self.majority,
+                        round_number=self.round_number,
+                        round_id=self.id,
+                        participant_id=participant_id,
+                        round_type=self.type
+                    )
+            reward_manager.add_rewards_to_participant(
+                reward_type=RewardType.LEADER,
+                participant_output=self.leader_result,
+                round_number=self.round_number,
+                round_id=self.id,
+                participant_id=self.leader_id,
+                round_type=self.type
+            )
+            participants_of_previous_round =[p for p in reward_manager.initial_validator_pool if self.previous_round_id in reward_manager.initial_validator_pool[p].rounds]
+            print(participants_of_previous_round)
+            leader_of_previous_round_id = next(p for p in participants_of_previous_round 
+                                               if reward_manager.initial_validator_pool[p].rounds[self.previous_round_id].role == Role.LEADER)
+
+            reward_manager.initial_validator_pool[leader_of_previous_round_id].add_to_round(self.id, Role.PREVIOUS_ROUND_PARTICIPANT)
+            reward_manager.add_rewards_to_participant(
+                amount=-reward_manager.budget.leader_time_units,
+                reward_type=None,
+                participant_output=self.leader_result,
+                round_number=self.round_number,
+                round_id=self.id,
+                participant_id=leader_of_previous_round_id,
+                round_type=self.type
+            )
+        else:
+            for participant_id in self.validator_ids:
+                reward_manager.add_rewards_to_participant(
+                    reward_type=RewardType.VALIDATOR,
+                    participant_output=None,
+                    round_number=self.round_number,
+                    round_id=self.id,
+                    participant_id=participant_id,
+                    round_type=self.type
+                )
 
 class LeaderAppealRound(Round):
     def __init__(self, round_number: int, reward_manager: RewardManager, *args, **kwargs):

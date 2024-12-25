@@ -69,8 +69,8 @@ class Transaction:
             reward_manager=self.reward_manager,
             leader_result=leader_result,
             voting_vector=voting_vector,
+            previous_round_id=self.rounds[-1].id,
         )
-        
         self.rounds.append(new_round)
 
     
@@ -98,6 +98,7 @@ class Transaction:
             reward_manager=self.reward_manager,
             leader_result=leader_result,
             voting_vector=voting_vector,
+            previous_round_id=self.rounds[-1].id,
         )
         self.rounds.append(new_round)
 
@@ -106,11 +107,8 @@ class Transaction:
         for round in self.rounds:
             print(f"\nRound {round.round_number} (ID: {round.id}):")
             
-            # Print leader rewards
-            leader_reward = self.reward_manager.initial_validator_pool[round.leader_id].rounds[round.id].reward
-            print(f"  Leader {round.leader_id}: {leader_reward}")
+            # Print rewards
+            participants = [self.reward_manager.initial_validator_pool[p] for p in self.reward_manager.initial_validator_pool if round.id in self.reward_manager.initial_validator_pool[p].rounds]
+            for participant in participants:
+                print(f"  {participant.id} - {participant.rounds[round.id].role}: {participant.rounds[round.id].reward}")
             
-            # Print validator rewards
-            for validator_id in round.validator_ids:
-                reward = self.reward_manager.initial_validator_pool[validator_id].rounds[round.id].reward
-                print(f"  Validator {validator_id}: {reward}")

@@ -52,3 +52,43 @@ def test_initial_round():
 
     # Print rewards
     tx.print_current_rewards()
+
+def test_rotation_round():
+    """Test rotation round after initial round."""
+    # Create validator pool
+    initial_validators_pool = {
+        generate_ethereum_address(): Participant() for _ in range(1000)
+    }
+
+    sequence = generate_validators_per_round_sequence()
+    
+    budget = Budget(
+        leader_time_units=50,
+        validator_time_units=30,
+        rotations_per_round=[20 for _ in range(len(sequence))],
+        appeal_rounds=5,
+        total_internal_messages_budget=1000,
+    )
+
+    tx = Transaction(budget, initial_validators_pool)
+
+    # Start with initial round
+    tx.start(
+        leader_result=LeaderResult.RECEIPT,
+        voting_vector=[Vote.DISAGREE] * sequence[0]
+    )
+
+    # Add rotation round
+    tx.rotate(
+        leader_result=LeaderResult.RECEIPT,
+        voting_vector=[Vote.AGREE] * sequence[1]  # Use second number from sequence
+    )
+
+    # Verify we have two rounds
+    assert len(tx.rounds) == 2
+    
+    # Verify the second round is properly linked to the first
+    assert tx.rounds[1].previous_round_id == tx.rounds[0].id
+
+    # Print rewards to verify distribution
+    tx.print_current_rewards()

@@ -7,6 +7,7 @@ class Role(Enum):
     LEADER = "leader"
     VALIDATOR = "validator"
     APPEALANT = "appealant"
+    PREVIOUS_ROUND_PARTICIPANT = "previous_round_participant"
 
 class Status(Enum):
     FINAL = "final"

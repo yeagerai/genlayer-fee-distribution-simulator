@@ -21,7 +21,10 @@ class RewardManager:
         self.initial_validator_pool[from_participant_id].rounds[to_round_id].reward -= amount
         self.initial_validator_pool[to_participant_id].rounds[to_round_id].reward += amount
 
-    def add_rewards_to_participant(self, reward_type: RewardType, participant_output: Vote | LeaderResult | None, round_id: str, participant_id: str, round_type: RoundType, round_number: int, amount: int | None = None) -> None:
+    def add_rewards_to_participant(self, reward_type: RewardType|None, participant_output: Vote | LeaderResult | None, round_id: str, participant_id: str, round_type: RoundType, round_number: int, amount: int | None = None) -> None:
+        if amount is not None:
+            self.initial_validator_pool[participant_id].rounds[round_id].reward += amount
+            return
         if reward_type == RewardType.LEADER:
             if participant_output == LeaderResult.RECEIPT:
                 self.initial_validator_pool[participant_id].rounds[round_id].reward += self.budget.leader_time_units
@@ -34,7 +37,4 @@ class RewardManager:
                 self.initial_validator_pool[participant_id].rounds[round_id].reward -= self.initial_validator_pool[participant_id].stake * (1-VALIDATOR_IDLE_SLASHING_PERCENTAGE)
             else:
                 self.initial_validator_pool[participant_id].rounds[round_id].reward += self.budget.validator_time_units
-        
-        if amount is not None:
-            self.initial_validator_pool[participant_id].rounds[round_id].reward += amount
 
