@@ -10,7 +10,6 @@ from simulation.utils import (
     compute_rotation_budget,
 )
 
-from simulation.models.round import Round
 from simulation.models.enums import RoundType, AppealType
 
 
@@ -49,20 +48,6 @@ class Budget:
         self.total_internal_messages_budget = total_internal_messages_budget
         self.external_messages_budget = external_messages_budget
 
-        # Calculate total available gas
-        self.total_gas = (
-            self.leader_time_units
-            + self.validator_time_units
-            + self.rotation_budget
-            + self.appeal_rounds_budget
-            + self.total_internal_messages_budget
-            + self.external_messages_budget
-        )
-
-        # Runtime tracking
-        self.remaining_gas = self.total_gas
-        self.failed = False
-
     def spend_round_budget(self, round_id: str, round_type: RoundType | AppealType, num_rounds: int) -> None:
         cost = self.leader_time_units + self.validator_time_units*self.validators_per_round[num_rounds]
         if round_type == RoundType.INITIAL:  
@@ -86,15 +71,3 @@ class Budget:
                 self.appeal_rounds_budget -= cost
                 if self.appeal_rounds_budget < 0:
                     raise OutOfGasError(f"Not enough gas to spend for appeal tribunal round {round_id}")
-
-
-    def __repr__(self) -> str:
-        """String representation of the budget state."""
-        used, remaining, percentage = self.get_gas_usage()
-        return (
-            f"TransactionBudget("
-            f"used={used}, "
-            f"remaining={remaining}, "
-            f"usage={percentage:.1f}%, "
-            f"failed={self.failed})"
-        )

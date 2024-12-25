@@ -21,7 +21,6 @@ class RewardManager:
         self.initial_validator_pool[to_participant_id].rounds[to_round_id].reward += amount
 
     def add_rewards_to_participant(self, reward_type: RewardType, round_id: str, participant_id: str, round_type: RoundType, round_number: int, amount: int | None = None) -> None:
-        self.budget.spend_round_budget(round_id, round_type, round_number)
         if reward_type == RewardType.LEADER:
             self.initial_validator_pool[participant_id].rounds[round_id].reward += self.budget.leader_time_units
         elif reward_type == RewardType.VALIDATOR:

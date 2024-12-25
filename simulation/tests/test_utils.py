@@ -48,18 +48,20 @@ def test_set_random_seed():
     seed = 42
     set_random_seed(seed)
 
-    # Generate some random numbers
+    # Generate some random ethereum addresses
     random_sequence1 = [generate_ethereum_address() for _ in range(5)]
-    numpy_sequence1 = np.random.rand(5)
 
     # Reset seed and generate again
     set_random_seed(seed)
     random_sequence2 = [generate_ethereum_address() for _ in range(5)]
-    numpy_sequence2 = np.random.rand(5)
 
     # Check sequences match
     assert random_sequence1 == random_sequence2
-    np.testing.assert_array_equal(numpy_sequence1, numpy_sequence2)
+    
+    # Generate different sequence with different seed
+    set_random_seed(43)
+    random_sequence3 = [generate_ethereum_address() for _ in range(5)]
+    assert random_sequence1 != random_sequence3  # Verify sequences are different with different seeds
 
 
 def test_validator_sequence_edge_cases():

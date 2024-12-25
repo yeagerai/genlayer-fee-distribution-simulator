@@ -38,7 +38,7 @@ class Transaction:
             raise ValueError("Invalid voting vector length")
 
         first_round = InitialRound(
-            round_number=1,
+            round_number=0,
             reward_manager=self.reward_manager,
             leader_result=leader_result,
             voting_vector=voting_vector,
@@ -103,72 +103,14 @@ class Transaction:
 
     def print_current_rewards(self):
         """Print current reward distribution for all participants."""
-        for round_idx, round in enumerate(self.rounds):
-            print(f"\nRound {round_idx} (ID: {round.id}):")
+        for round in self.rounds:
+            print(f"\nRound {round.round_number} (ID: {round.id}):")
             
             # Print leader rewards
-            leader_reward = round.leader.rewards.get(round.id, 0)
-            print(f"  Leader {round.leader.id}: {leader_reward}")
+            leader_reward = self.reward_manager.initial_validator_pool[round.leader_id].rounds[round.id].reward
+            print(f"  Leader {round.leader_id}: {leader_reward}")
             
             # Print validator rewards
-            for validator in round.validators:
-                reward = validator.rewards.get(round.id, 0)
-                if reward != 0:  # Only print non-zero rewards
-                    print(f"  Validator {validator.id}: {reward}")
-            
-            # Print appeal rewards if any
-            for appeal in round.appeals:
-                print(f"  Appeal {appeal.id}:")
-                if appeal.appealant_reward != 0:
-                    print(f"    Appealant {appeal.appealant.id}: {appeal.appealant_reward}")
-
-
-def main():
-    # Initialize validator pool
-    initial_validators_pool = {
-        p.id: p for p in [Participant() for _ in range(1000)]
-    }
-
-
-    # Create transaction budget
-    tx_budget = Budget(
-        leader_time_units=50,
-        validator_time_units=60,
-        rotations_per_round=[20, 20, 20, 20, 20],
-        appeal_rounds=5,
-        total_internal_messages_budget=1000,
-    )
-
-    # Create and run transaction
-    tx = Transaction(
-        transaction_budget=tx_budget,
-        initial_validator_pool=initial_validators_pool,
-    )
-
-    # Simulate first round
-    tx.start(
-        leader_result="R",
-        voting_vector=[Vote.A, Vote.D, Vote.A, Vote.A, Vote.D]
-    )
-    tx.print_current_rewards()
-
-    # Simulate appeal
-    tx.appeal(
-        appealant_id=list(initial_validators_pool.values())[0].id,
-        appeal_type=AppealType.VALIDATOR,
-        bond=100,
-        leader_result="D",
-        voting_vector=[Vote.A, Vote.A, Vote.D, Vote.A, Vote.D]
-    )
-    tx.print_current_rewards()
-
-    # Add new round
-    tx.rotate(
-        leader_result="D",
-        voting_vector=[Vote.D, Vote.D, Vote.A, Vote.D, Vote.A]
-    )
-    tx.print_current_rewards()
-
-
-if __name__ == "__main__":
-    main()
+            for validator_id in round.validator_ids:
+                reward = self.reward_manager.initial_validator_pool[validator_id].rounds[round.id].reward
+                print(f"  Validator {validator_id}: {reward}")

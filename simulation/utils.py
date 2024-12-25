@@ -1,12 +1,9 @@
 # simulation/utils.py
 
 import random
-import numpy as np
 
 from simulation.config_constants import MAX_NUM_VALS, MIN_NUM_VALS
-from simulation.models.enums import Vote, Role, RoundType
-from simulation.models.round import Round
-from simulation.models.participant import Participant
+from simulation.models.enums import Vote, Role
 
 
 def generate_ethereum_address() -> str:
@@ -31,35 +28,45 @@ def generate_validators_per_round_sequence() -> list[int]:
 
 def set_random_seed(seed_value: int) -> None:
     random.seed(seed_value)
-    np.random.seed(seed_value)
+    # np.random.seed(seed_value)
 
 
 def compute_appeal_rounds_budget(
     leader_time_units: int, validator_time_units: int, num_rounds: int
 ) -> int:
-    # That should take into account that appeals escalate validator count
-    # and that there are three different types of appeals
-    # so each type has a different cost for the user, so just with the number of rounds
-    # we must compute the maximum cost so the appeal type that is most expensive
-
-    leader_appeal_cost = ...
-    validator_appeal_cost = ...
-    tribunal_appeal_cost = ...
+    # TODO: fix this
+    validators_per_round = generate_validators_per_round_sequence()
+    leader_appeal_cost = sum(leader_time_units + validators_per_round[round_number] * validator_time_units for round_number in range(num_rounds))
+    validator_appeal_cost = sum(validators_per_round[round_number] * validator_time_units for round_number in range(num_rounds))
+    tribunal_appeal_cost = 0
 
     max_cost = max(leader_appeal_cost, validator_appeal_cost, tribunal_appeal_cost)
 
-    return num_rounds * max_cost
+    return max_cost
 
 
 def compute_rotation_budget(
-    leader_time_units: int, validator_time_units: int, rotations_per_round: list[int]
+    leader_time_units: int, 
+    validator_time_units: int, 
+    rotations_per_round: list[int]
 ) -> int:
     validators_per_round = generate_validators_per_round_sequence()
     if len(rotations_per_round) != len(validators_per_round):
         raise ValueError("Rotations per round must match validators per round")
-    return sum(
-        rotations_per_round * validators_per_round * [validator_time_units]
-    ) + sum(rotations_per_round * [leader_time_units])
+    
+    # Calculate validator costs
+    validator_costs = sum(
+        rotations * num_validators * validator_time_units
+        for rotations, num_validators in zip(rotations_per_round, validators_per_round)
+    )
+    
+    # Calculate leader costs
+    leader_costs = sum(
+        rotations * leader_time_units
+        for rotations in rotations_per_round
+    )
+    
+    return validator_costs + leader_costs
 
 def calculate_majority(voting_vector: list[Vote]) -> Vote | None:
     """Calculate the majority vote result."""
@@ -81,33 +88,34 @@ def calculate_majority(voting_vector: list[Vote]) -> Vote | None:
         return None  # Disagreement
     else:
         return None  # No clear majority
+
+def select_leader_and_validators(round_number: int, participants: dict, round_id: str) -> tuple[str, list[str]]:
+    # Get sequence of required validators per round
+    validators_per_round = generate_validators_per_round_sequence()
+    required_validators = validators_per_round[round_number]
     
-def get_participants_by_id(participants: dict[str, Participant], id: str) -> list[Participant]:
-    return [participant for participant in participants.values() if id in participant.round_ids]
+    # Get available participants (those who haven't participated in this round)
+    available_participants = [
+        p_id for p_id, p in participants.items() 
+        if p.rounds == {}
+    ]
+    if len(available_participants) < required_validators:  # +1 for leader
+        raise ValueError(f"Not enough available participants for round {round_number}")
+    
+    # Randomly select leader and validators
+    selected_participants = random.sample(available_participants, required_validators)
+    leader_id = selected_participants[0]
+    validator_ids = selected_participants
+    
+    # Assign roles to participants
+    participants[leader_id].add_to_round(round_id, Role.LEADER)
+    for validator_id in validator_ids:
+        participants[validator_id].add_to_round(round_id, Role.VALIDATOR)
+    
+    return leader_id, validator_ids
 
-def get_leader_by_id(participants: dict[str, Participant], id: str) -> Participant:
-    participants_by_id = get_participants_by_id(participants, id)
-    return next((participant for participant in participants_by_id if participant.roles[id] == Role.LEADER), None)
+def compute_next_step(round):
+    ...
 
-def get_validators_by_id(participants: dict[str, Participant], id: str) -> list[Participant]:
-    participants_by_id = get_participants_by_id(participants, id)
-    return [participant for participant in participants_by_id if participant.roles[id] == Role.VALIDATOR]
-
-def get_appealants_by_id(participants: dict[str, Participant], id: str) -> list[Participant]:
-    participants_by_id = get_participants_by_id(participants, id)
-    return [participant for participant in participants_by_id if participant.roles[id] == Role.APPEALANT]
-
-def move_rewards_from_participant(round_id: str, amount: int, participant: Participant, to_participant: Participant) -> None:
-    participant.rewards[round_id] -= amount
-    to_participant.rewards[round_id] += amount
-
-def compute_next_step(round: Round) -> RoundType | None:
-    current_result = round.result
-    next_step = None
-    # logic for next step
-    return next_step
-
-def should_finalize(round: Round) -> bool: ...
-
-def select_leader_and_validators(participants: dict[str, Participant], previous_round_ids: str) -> tuple[str, list[str]]: 
+def should_finalize(round):
     ...

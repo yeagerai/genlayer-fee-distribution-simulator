@@ -1,193 +1,105 @@
 import pytest
 from unittest.mock import patch
 
-from simulation.models.budget import (
-    Budget,
-    PresetLeaf,
-    PresetBranch,
-)
+from simulation.models.budget import Budget
+from simulation.models.enums import RoundType, AppealType
 from simulation.errors import OutOfGasError
+from simulation.utils import generate_ethereum_address, generate_validators_per_round_sequence
 
-
-# Mock the sequence generation to always return a fixed length for tests
 @pytest.fixture(autouse=True)
 def mock_validator_sequence():
     """Mock the validator sequence to return a fixed length for testing."""
     with patch(
-        "simulation.models.transaction_budget.generate_validators_per_round_sequence"
+        "simulation.models.budget.generate_validators_per_round_sequence"
     ) as mock:
-        mock.return_value = [3, 7, 15]  # Fixed sequence for testing
+        # Create sequence starting from MIN_NUM_VALS doubling each time
+        sequence = [5, 11, 23, 47, 95, 191, 383, 767, 1000]  # Based on MIN_NUM_VALS=5, MAX_NUM_VALS=1000
+        mock.return_value = sequence
         yield mock
-
-
-def test_total_gas_calculation():
-    budget = Budget(
-        initial_leader_budget=100,
-        initial_validator_budget=200,
-        rotation_budget=[50, 50, 50],
-        appeal_rounds_budget=225,  # Total gas for appeal rounds
-        total_internal_messages_budget=500,
-        external_messages_budget_guess=[25, 25],
-    )
-
-    expected_total = (
-        100  # initial_leader_budget
-        + 200  # initial_validator_budget
-        + 150  # sum of rotation_budget
-        + 225  # appeal_rounds_budget
-        + 500  # total_internal_messages_budget
-        + 50  # sum of external_messages_budget_guess
-    )
-
-    assert budget.total_gas == expected_total
-    assert budget.remaining_gas == expected_total
-
-    # Test gas usage tracking
-    used, remaining, percentage = budget.get_gas_usage()
-    assert used == 0
-    assert remaining == expected_total
-    assert percentage == 0.0
-
-    # Test after some gas usage
-    gas_to_use = 100
-    budget.remaining_gas -= gas_to_use
-    used, remaining, percentage = budget.get_gas_usage()
-    assert used == gas_to_use
-    assert remaining == expected_total - gas_to_use
-    assert percentage == (gas_to_use / expected_total) * 100
 
 
 @pytest.fixture
 def simple_budget():
     """Basic budget setup for testing."""
+    sequence = generate_validators_per_round_sequence()
     return Budget(
-        initial_leader_budget=100,
-        initial_validator_budget=200,
-        rotation_budget=[50, 50, 50],
-        appeal_rounds_budget=225,  # Total gas for appeal rounds
+        leader_time_units=50,
+        validator_time_units=30,
+        rotations_per_round=[20 for _ in range(len(sequence))],
+        appeal_rounds=5,
         total_internal_messages_budget=500,
-        external_messages_budget_guess=[25, 25],
-    )
-
-
-@pytest.fixture
-def preset_budget():
-    """Budget with preset patterns for testing."""
-    leaf1 = PresetLeaf(
-        initial_leader_budget=50,
-        initial_validator_budget=100,
-        rotation_budget=[20, 20, 20],  # Changed to length 3
-        appeal_rounds_budget=60,
-    )
-
-    leaf2 = PresetLeaf(
-        initial_leader_budget=30,
-        initial_validator_budget=60,
-        rotation_budget=[10, 10, 10],  # Changed to length 3
-        appeal_rounds_budget=30,
-    )
-
-    branch = PresetBranch(
-        initial_leader_budget=100,
-        initial_validator_budget=200,
-        rotation_budget=[40, 40, 40],  # Changed to length 3
-        appeal_rounds_budget=120,
-        internal_messages_budget_guess={"msg1": "leaf1", "msg2": "leaf2"},
-        external_messages_budget_guess=[50, 50],
-    )
-
-    return Budget(
-        initial_leader_budget=100,
-        initial_validator_budget=200,
-        rotation_budget=[50, 50, 50],  # Changed to length 3
-        appeal_rounds_budget=150,
-        preset_leafs={"leaf1": leaf1, "leaf2": leaf2},
-        preset_branches={"branch1": branch},
-        total_internal_messages_budget=1000,
-        external_messages_budget_guess=[100],
+        external_messages_budget=100
     )
 
 
 def test_budget_initialization(simple_budget):
     """Test basic budget initialization and total gas calculation."""
-    expected_total = 100 + 200 + 150 + 225 + 500 + 50  # All budgets summed
-    assert simple_budget.total_gas == expected_total
-    assert simple_budget.remaining_gas == expected_total
-    assert not simple_budget.failed
+    # Calculate expected initial round budget (leader + validators for first round)
+    sequence = generate_validators_per_round_sequence()
+    initial_round_budget = simple_budget.leader_time_units + simple_budget.validator_time_units * sequence[0]
 
-
-def test_gas_usage_tracking(simple_budget):
-    """Test gas usage calculation and tracking."""
-    initial_gas = simple_budget.remaining_gas
-    gas_to_use = 100
-
-    simple_budget.remaining_gas -= gas_to_use
-    used, remaining, percentage = simple_budget.get_gas_usage()
-
-    assert used == gas_to_use
-    assert remaining == initial_gas - gas_to_use
-    assert percentage == (gas_to_use / initial_gas) * 100
-
-
-def test_preset_leaf_computation(preset_budget):
-    """Test gas computation for leaf presets."""
-    gas = preset_budget.compute_internal_message_budget("leaf1")
-    expected = (
-        50  # initial_leader_budget
-        + 100  # initial_validator_budget
-        + 60  # sum of rotation_budget (20 * 3)
-        + 60  # appeal_rounds_budget
-    )
-    assert gas == expected
-
-
-def test_preset_branch_computation(preset_budget):
-    """Test gas computation for branch presets with references."""
-    gas = preset_budget.compute_internal_message_budget("branch1")
-
-    # Branch own gas + referenced leaf presets
-    leaf1_gas = 50 + 100 + 60 + 60  # leaf1's total gas
-    leaf2_gas = 30 + 60 + 30 + 30  # leaf2's total gas
-    branch_own_gas = (
-        100  # initial_leader_budget
-        + 200  # initial_validator_budget
-        + 120  # sum of rotation_budget (40 * 3)
-        + 120  # appeal_rounds_budget
-        + 100  # sum of external_messages_budget_guess
-    )
-
-    expected = branch_own_gas + leaf1_gas + leaf2_gas
-    assert gas == expected
-
-
-def test_out_of_gas_handling(preset_budget):
-    """Test handling of out-of-gas situations."""
-    # Use up most of the gas
-    preset_budget.remaining_gas = 100
-
-    with pytest.raises(OutOfGasError):
-        preset_budget.compute_internal_message_budget("branch1")
-
-    assert preset_budget.failed
-
-
-def test_round_budget_access(simple_budget):
-    """Test access to round-specific budgets."""
-    rotation, appeal = simple_budget.get_round_budgets(1)
-    assert rotation == 50
-    assert appeal == 225
-
-    with pytest.raises(ValueError):
-        simple_budget.get_round_budgets(5)  # Exceeds available rounds
+    assert simple_budget.initial_round_budget == initial_round_budget
 
 
 def test_invalid_budget_initialization():
-    """Test validation of budget initialization."""
+    """Test validation of budget initialization with incorrect rotation budget length."""
+    sequence = generate_validators_per_round_sequence()
     with pytest.raises(ValueError):
         Budget(
-            initial_leader_budget=100,
-            initial_validator_budget=200,
-            rotation_budget=[50, 50],
-            appeal_rounds_budget=75,
+            leader_time_units=50,
+            validator_time_units=30,
+            rotations_per_round=[20, 20],  # Wrong length
+            appeal_rounds=5,
             total_internal_messages_budget=500,
         )
+
+
+def test_spend_initial_round_budget(simple_budget):
+    """Test spending budget for initial round."""
+    round_id = generate_ethereum_address()
+    initial_budget = simple_budget.initial_round_budget
+    
+    simple_budget.spend_round_budget(round_id, RoundType.INITIAL, 0)
+    
+    assert simple_budget.initial_round_budget < initial_budget
+
+
+def test_spend_rotation_round_budget(simple_budget):
+    """Test spending budget for rotation round."""
+    round_id = generate_ethereum_address()
+    initial_rotation_budget = simple_budget.rotation_budget
+    
+    simple_budget.spend_round_budget(round_id, RoundType.ROTATE, 1)  # 1 for second round
+    
+    assert simple_budget.rotation_budget < initial_rotation_budget
+
+
+def test_spend_appeal_round_budget(simple_budget):
+    """Test spending budget for different types of appeal rounds."""
+    round_id = generate_ethereum_address()
+    initial_appeal_budget = simple_budget.appeal_rounds_budget
+    
+    # Test leader appeal
+    simple_budget.spend_round_budget(round_id, AppealType.LEADER, 1)
+    assert simple_budget.appeal_rounds_budget < initial_appeal_budget
+    
+    # Test validator appeal
+    current_appeal_budget = simple_budget.appeal_rounds_budget
+    simple_budget.spend_round_budget(round_id, AppealType.VALIDATOR, 1)
+    assert simple_budget.appeal_rounds_budget < current_appeal_budget
+    
+    # Test tribunal appeal
+    current_appeal_budget = simple_budget.appeal_rounds_budget
+    simple_budget.spend_round_budget(round_id, AppealType.TRIBUNAL, 1)
+    assert simple_budget.appeal_rounds_budget < current_appeal_budget
+
+
+def test_out_of_gas_handling(simple_budget):
+    """Test handling of out-of-gas situations."""
+    round_id = generate_ethereum_address()
+    
+    # Deplete initial round budget
+    simple_budget.initial_round_budget = 0
+    
+    with pytest.raises(OutOfGasError):
+        simple_budget.spend_round_budget(round_id, RoundType.INITIAL, 0)

@@ -4,8 +4,17 @@ from datetime import datetime, timedelta
 
 from simulation.config_constants import FINALITY_WINDOW_MINS
 from simulation.models.enums import Vote, AppealType, LeaderResult, RoundType, RewardType
-from simulation.utils import generate_ethereum_address, calculate_majority
+from simulation.utils import generate_ethereum_address, calculate_majority, select_leader_and_validators
 from simulation.models.reward_manager import RewardManager
+
+def spend_budget_before_rewards(func):
+    """Decorator that ensures budget is spent before rewards are distributed."""
+    def wrapper(self, reward_manager: RewardManager, *args, **kwargs):
+        # Spend budget for the round
+        reward_manager.budget.spend_round_budget(self.id, self.type, self.round_number)
+        # Then distribute rewards
+        return func(self, reward_manager, *args, **kwargs)
+    return wrapper
 
 class Round:
     def __init__(
@@ -19,21 +28,36 @@ class Round:
         self.round_number = round_number
         self.leader_result = leader_result
         self.voting_vector = voting_vector
-        self.leader_id, self.validator_ids = reward_manager.validators_and_leader_selection(self.id)
+        self.leader_id, self.validator_ids = select_leader_and_validators(self.round_number, reward_manager.initial_validator_pool, self.id)
         self.majority = calculate_majority(self.voting_vector)
 
 
 class InitialRound(Round):
     def __init__(self, round_number: int, reward_manager: RewardManager, *args, **kwargs):
         super().__init__(round_number, reward_manager, *args, **kwargs)
-        self.distribute_rewards(reward_manager)
         self.type = RoundType.INITIAL
+        self.distribute_rewards(reward_manager)
 
+    @spend_budget_before_rewards
     def distribute_rewards(self, reward_manager: RewardManager):
+        # Add rewards for validators
         for participant_id in self.validator_ids:
-            reward_manager.add_rewards_to_participant(RewardType.VALIDATOR, self.round_number, self.id, participant_id, self.type)
-        reward_manager.add_rewards_to_participant(RewardType.LEADER, self.round_number, self.id, self.leader_id, self.type)
-
+            reward_manager.add_rewards_to_participant(
+                reward_type=RewardType.VALIDATOR,
+                round_number=self.round_number,
+                round_id=self.id,
+                participant_id=participant_id,
+                round_type=self.type
+            )
+        
+        # Add rewards for leader
+        reward_manager.add_rewards_to_participant(
+            reward_type=RewardType.LEADER,
+            round_number=self.round_number,
+            round_id=self.id,
+            participant_id=self.leader_id,
+            round_type=self.type
+        )
 class RotationRound(Round):
     def __init__(self, round_number: int, reward_manager: RewardManager, *args, **kwargs):
         super().__init__(round_number, reward_manager, *args, **kwargs)
@@ -41,6 +65,7 @@ class RotationRound(Round):
 
         self.distribute_rewards(reward_manager)
 
+    @spend_budget_before_rewards
     def distribute_rewards(self, reward_manager: RewardManager): ...
 
 class LeaderAppealRound(Round):
@@ -55,6 +80,7 @@ class LeaderAppealRound(Round):
     
     def compute_success(self, previous_round: Round): return self.majority != previous_round.majority
 
+    @spend_budget_before_rewards
     def distribute_rewards(self, reward_manager: RewardManager): ...
 
 class ValidatorAppealRound(Round):
@@ -69,6 +95,7 @@ class ValidatorAppealRound(Round):
     
     def compute_success(self): ...
 
+    @spend_budget_before_rewards
     def distribute_rewards(self, reward_manager: RewardManager): ...
 
 class TribunalAppealRound(Round):
@@ -83,4 +110,5 @@ class TribunalAppealRound(Round):
     
     def compute_success(self): ...
 
+    @spend_budget_before_rewards
     def distribute_rewards(self, reward_manager: RewardManager): ...
