@@ -225,7 +225,7 @@ def run_test(test_index: int, transaction_results: TransactionRoundResults,
     pretty_print_transaction_results(transaction_results, round_labels)
     
     # Print fee distribution 
-    pretty_print_fee_distribution(result.model_dump()["fees"])
+    pretty_print_fee_distribution(result.dict()["fees"])
 
 if __name__ == "__main__":
     # Set random seed for reproducibility

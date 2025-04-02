@@ -91,7 +91,7 @@ def run_scenario_1():
     pretty_print_transaction_results(transaction_results, round_labels)
     
     # Print fee distribution 
-    pretty_print_fee_distribution(result.model_dump()["fees"])
+    pretty_print_fee_distribution(result.dict()["fees"])
 
 def run_scenario_2():
     """
@@ -147,7 +147,7 @@ def run_scenario_2():
     pretty_print_transaction_results(transaction_results, round_labels)
     
     # Print fee distribution 
-    pretty_print_fee_distribution(result.model_dump()["fees"])
+    pretty_print_fee_distribution(result.dict()["fees"])
 
 def run_scenario_3():
     """
@@ -236,7 +236,7 @@ def run_scenario_3():
     pretty_print_transaction_results(transaction_results, round_labels)
     
     # Print fee distribution 
-    pretty_print_fee_distribution(result.model_dump()["fees"])
+    pretty_print_fee_distribution(result.dict()["fees"])
 
 def run_scenario_4():
     """
@@ -320,7 +320,7 @@ def run_scenario_4():
     pretty_print_transaction_results(transaction_results, round_labels)
     
     # Print fee distribution 
-    pretty_print_fee_distribution(result.model_dump()["fees"])
+    pretty_print_fee_distribution(result.dict()["fees"])
 
 def run_scenario_5():
     """
@@ -376,7 +376,7 @@ def run_scenario_5():
     pretty_print_transaction_results(transaction_results, round_labels)
     
     # Print fee distribution 
-    pretty_print_fee_distribution(result.model_dump()["fees"])
+    pretty_print_fee_distribution(result.dict()["fees"])
 
 if __name__ == "__main__":
     print(f"\n{Colors.BOLD}{Colors.HEADER}===== FEE DISTRIBUTION TEST SCENARIOS ====={Colors.ENDC}")
