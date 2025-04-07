@@ -178,6 +178,8 @@ def distribute_round(
     if label == "normal_round":
         majority = compute_majority(votes)
         if majority == "UNDETERMINED":  # equal split
+
+            # TODO: Check Deterministic Violation Majority and slash leader if it is
             # Get first address as leader
             first_addr = next(iter(votes.keys()), None)
             if first_addr:
@@ -473,6 +475,9 @@ def distribute_fees(
     Returns:
         Tuple of (updated fee distribution, round labels)
     """
+
+    # TODO: Replace idle validators and slash them
+
     # Get labels for all rounds
     labels = label_rounds(transaction_results)
 
@@ -492,12 +497,3 @@ def distribute_fees(
         pretty_print_fee_distribution(fee_distribution.dict()["fees"])
 
     return fee_distribution, labels
-
-
-# TODO: add auto computing of bonds per unsuccesful appeal type
-
-
-# TODO: show pretty prints on terminal
-# TODO: build a frontend with streamlit so others can use it
-# TODO: add unit tests
-# TODO: add docs
