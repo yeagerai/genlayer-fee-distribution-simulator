@@ -1,8 +1,24 @@
 from utils import generate_random_address
 
 # Round sizes (odd indexes are appeal rounds)
-round_sizes = [ 
-    5, 7, 11, 13, 23, 25, 47, 49, 95, 97, 191, 193, 383, 385, 767, 769, 1535,
+round_sizes = [
+    5,
+    7,
+    11,
+    13,
+    23,
+    25,
+    47,
+    49,
+    95,
+    97,
+    191,
+    193,
+    383,
+    385,
+    767,
+    769,
+    1535,
 ]
 
 penalty_reward_coefficient = 2
@@ -22,5 +38,5 @@ for addr in addresses_pool:
         "sender": 0,
         "sender_node": 0,
         "appealant": 0,
-        "appealant_node": 0
+        "appealant_node": 0,
     }

@@ -1,13 +1,14 @@
 from typing import Dict, List, Any
 from custom_types import VoteType, VoteValue, MajorityOutcome
 
+
 def normalize_vote(vote_value: VoteValue) -> VoteType:
     """
     Convert any vote value to a standard VoteType for comparison.
-    
+
     Args:
         vote_value: A vote value which could be a simple VoteType or a list with LeaderAction
-        
+
     Returns:
         The normalized VoteType
     """
@@ -16,27 +17,30 @@ def normalize_vote(vote_value: VoteValue) -> VoteType:
         return vote_value[1]
     return vote_value
 
-def who_is_in_majority(rotation: Dict[str, VoteValue], majority: MajorityOutcome) -> List[str]:
+
+def who_is_in_majority(
+    rotation: Dict[str, VoteValue], majority: MajorityOutcome
+) -> List[str]:
     """
     Return the addresses that are in majority.
-    
+
     Args:
         rotation: A dictionary mapping addresses to votes
         majority: The majority outcome to match against
-        
+
     Returns:
         A list of addresses that contributed to the majority
     """
     majority_addresses = []
-    
+
     # Map MajorityOutcome to the corresponding VoteType for comparison
     vote_mapping = {
         "AGREE": "Agree",
         "DISAGREE": "Disagree",
         "TIMEOUT": "Timeout",
-        "UNDETERMINED": None  # Special case handled below
+        "UNDETERMINED": None,  # Special case handled below
     }
-    
+
     # If majority is UNDETERMINED, collect addresses with Disagree votes
     if majority == "UNDETERMINED":
         for addr, vote in rotation.items():
@@ -52,23 +56,24 @@ def who_is_in_majority(rotation: Dict[str, VoteValue], majority: MajorityOutcome
     minority_addresses = list(set(rotation.keys()) - set(majority_addresses))
     return majority_addresses, minority_addresses
 
+
 def compute_majority(rotation: Dict[str, VoteValue]) -> MajorityOutcome:
     """
     Calculate the majority vote result.
-    
+
     Args:
         rotation: A dictionary mapping addresses to votes
-        
+
     Returns:
         The majority outcome as a MajorityOutcome type
     """
     # Empty rotation case
     if not rotation:
         return "UNDETERMINED"
-        
+
     # Normalize votes for counting
     normalized_votes = {addr: normalize_vote(vote) for addr, vote in rotation.items()}
-    
+
     # Count each type of vote
     vote_counts = {"Agree": 0, "Disagree": 0, "Timeout": 0, "Idle": 0}
     for vote in normalized_votes.values():
