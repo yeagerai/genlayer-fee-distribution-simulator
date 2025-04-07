@@ -1,8 +1,5 @@
 from functools import partial
 from math import ceil
-import random
-import string
-import hashlib
 from typing import Dict, List
 
 from custom_types import TransactionRoundResults
@@ -76,21 +73,6 @@ class Colors:
     @staticmethod
     def colorize(text, color):
         return f"{color}{text}{Colors.ENDC}"
-
-
-def generate_random_address() -> str:
-    """
-    Generate a random Ethereum-style address.
-
-    Returns:
-        A random Ethereum address string
-    """
-    # Create random string as seed
-    seed = "".join(random.choices(string.ascii_letters + string.digits, k=32))
-    # Hash it with SHA-256
-    hashed = hashlib.sha256(seed.encode()).hexdigest()
-    # Format as Ethereum address (0x + 40 hex chars)
-    return "0x" + hashed[:40]
 
 
 def pretty_print_fee_distribution(fee_distribution: Dict[str, Dict[str, int]]) -> None:

@@ -161,12 +161,19 @@ def distribute_round(
     # Get the votes from the last rotation
     votes = round.rotations[-1].votes
 
-    last_normal_round_index = round_index - 1 if round_index % 2 == 0 else round_index
-    appeal_bond = compute_appeal_bond_partial(
-        last_normal_round_index,
-        transaction_budget.leaderTimeout,
-        transaction_budget.validatorsTimeout,
-    )
+    # Get appeal bond for this round if it’s an appeal round
+    appeal_bond = 0
+    if (
+        round_index % 2 == 1
+        and transaction_budget.appeals
+        and round_index // 2 < len(transaction_budget.appeals)
+    ):
+        normal_round_idx = round_index - 1  # Previous normal round
+        appeal_bond = compute_appeal_bond_partial(
+            normal_round_index=normal_round_idx,
+            leader_timeout=transaction_budget.leaderTimeout,
+            validators_timeout=transaction_budget.validatorsTimeout,
+        )
 
     if label == "normal_round":
         majority = compute_majority(votes)

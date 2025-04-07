@@ -1,4 +1,22 @@
-from utils import generate_random_address
+import random
+import string
+import hashlib
+
+
+def generate_random_address() -> str:
+    """
+    Generate a random Ethereum-style address.
+
+    Returns:
+        A random Ethereum address string
+    """
+    # Create random string as seed
+    seed = "".join(random.choices(string.ascii_letters + string.digits, k=32))
+    # Hash it with SHA-256
+    hashed = hashlib.sha256(seed.encode()).hexdigest()
+    # Format as Ethereum address (0x + 40 hex chars)
+    return "0x" + hashed[:40]
+
 
 # Round sizes (odd indexes are appeal rounds)
 round_sizes = [
