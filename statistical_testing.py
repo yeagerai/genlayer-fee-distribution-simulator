@@ -26,9 +26,10 @@ from utils import (
 
 # Prior probabilities for different vote types
 VOTE_PRIORS = {
-    "Agree": 0.7,  # Most validators tend to agree in healthy networks
+    "Agree": 0.65,  # Most validators tend to agree in healthy networks
     "Disagree": 0.2,
     "Timeout": 0.1,
+    "Idle": 0.05,  # Added Idle with 5% probability
     # "Idle" is not included in the valid VoteType literal union in custom_types.py
 }
 
@@ -93,51 +94,53 @@ def generate_statistical_vote_distribution(
 
     # Assign the majority vote
     for i in range(majority_count):
-        votes[addresses_pool[i]] = majority_vote
+        vote = majority_vote
+        if random.random() < 0.5:
+            hash_value = "0x" + "".join(random.choices("0123456789abcdef", k=40))
+            votes[addresses_pool[i]] = [vote, hash_value]
+        else:
+            votes[addresses_pool[i]] = vote
 
     # Assign random votes to the rest
     remaining_options = [v for v in vote_options if v != majority_vote]
     for i in range(majority_count, committee_size):
-        votes[addresses_pool[i]] = random.choices(
+        vote = random.choices(
             remaining_options, weights=[VOTE_PRIORS[v] for v in remaining_options], k=1
         )[0]
+        if random.random() < 0.5:
+            hash_value = "0x" + "".join(random.choices("0123456789abcdef", k=40))
+            votes[addresses_pool[i]] = [vote, hash_value]
+        else:
+            votes[addresses_pool[i]] = vote
 
     # Randomly select a leader and add leader receipt
     leader_idx = random.randint(0, committee_size - 1)
     leader_addr = addresses_pool[leader_idx]
-    votes[leader_addr] = (
-        ["LeaderReceipt", votes[leader_addr]]
-        if isinstance(votes[leader_addr], str)
-        else ["LeaderReceipt"] + votes[leader_addr]
-    )
+    leader_vote = votes[leader_addr]
+    if isinstance(leader_vote, list):
+        votes[leader_addr] = ["LeaderReceipt"] + leader_vote
+    else:
+        if random.random() < 0.5:
+            hash_value = "0x" + "".join(random.choices("0123456789abcdef", k=40))
+            votes[leader_addr] = ["LeaderReceipt", leader_vote, hash_value]
+        else:
+            votes[leader_addr] = ["LeaderReceipt", leader_vote]
 
     return votes
 
 
 def generate_statistical_scenario(
-    num_rounds: int = None,
+    num_rounds: int = 2,
 ) -> Tuple[TransactionRoundResults, TransactionBudget]:
     """
-    Generate a statistically likely scenario
+    Generate a realistic test scenario based on statistical priors
 
     Args:
-        num_rounds: Number of rounds (if None, chosen based on ROUND_TYPE_PRIORS)
+        num_rounds: Number of rounds to generate
 
     Returns:
-        Tuple of (transaction_results, transaction_budget)
+        Transaction results and budget
     """
-    # Determine if this is an appeal scenario
-    if num_rounds is None:
-        has_appeal = random.choices(
-            [True, False],
-            weights=[
-                ROUND_TYPE_PRIORS["appeal_round"],
-                ROUND_TYPE_PRIORS["normal_round"],
-            ],
-            k=1,
-        )[0]
-        num_rounds = random.randint(2, 3) if has_appeal else 1
-
     rounds = []
 
     # Generate each round
@@ -174,21 +177,27 @@ def generate_statistical_scenario(
     # Create transaction results
     transaction_results = TransactionRoundResults(rounds=rounds)
 
-    # Create transaction budget
+    # Create appeals if needed
     appeals = []
     if num_rounds > 1:
-        appealant_addr = random.choice(
-            addresses_pool[500:600]
-        )  # Use different address range
-        appeals = [Appeal(appealantAddress=appealant_addr, appealBond=300)]
+        appealant_addresses = random.sample(addresses_pool[200:300], num_rounds - 1)
+        for addr in appealant_addresses:
+            appeals.append(Appeal(appealantAddress=addr))
 
+    # Randomly select staking distribution
+    staking_dist = random.choice(["constant", "normal"])
+
+    # Create budget
     transaction_budget = TransactionBudget(
         leaderTimeout=100,
         validatorsTimeout=200,
         appealRounds=num_rounds,
-        rotations=[1] * num_rounds,
+        rotations=[random.randint(1, 3) for _ in range(num_rounds)],
         senderAddress=random.choice(addresses_pool[100:200]),
         appeals=appeals,
+        staking_distribution=staking_dist,
+        staking_mean=1000 if staking_dist == "normal" else None,
+        staking_variance=100 if staking_dist == "normal" else None,
     )
 
     return transaction_results, transaction_budget

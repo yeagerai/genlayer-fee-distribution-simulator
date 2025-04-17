@@ -1,15 +1,23 @@
 from typing import List
 from math import floor
-from majority import compute_majority, who_is_in_majority, normalize_vote
+from majority import (
+    compute_majority,
+    compute_majority_hash,
+    normalize_vote,
+    who_is_in_hash_majority,
+    who_is_in_vote_majority,
+)
 from utils import pretty_print_fee_distribution, compute_appeal_bond_partial
 from custom_types import (
+    FeeEntry,
     Round,
     TransactionBudget,
     FeeDistribution,
     TransactionRoundResults,
     RoundLabel,
 )
-from constants import penalty_reward_coefficient
+from constants import penalty_reward_coefficient, DEFAULT_STAKE, DEFAULT_HASH
+import random
 
 
 def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabel]:
@@ -161,7 +169,7 @@ def distribute_round(
     # Get the votes from the last rotation
     votes = round.rotations[-1].votes
 
-    # Get appeal bond for this round if it’s an appeal round
+    # Get appeal bond for this round if it's an appeal round
     appeal_bond = 0
     if (
         round_index % 2 == 1
@@ -196,7 +204,9 @@ def distribute_round(
                         ].validator_node += transaction_budget.validatorsTimeout
         else:
             # Get addresses in majority
-            majority_addresses, minority_addresses = who_is_in_majority(votes, majority)
+            majority_addresses, minority_addresses = who_is_in_vote_majority(
+                votes, majority
+            )
             # Distribute to majority validators
             for addr in majority_addresses:
                 if addr in fee_distribution.fees:
@@ -309,7 +319,9 @@ def distribute_round(
                 ].appealant_node += transaction_budget.leaderTimeout
 
             majority = compute_majority(votes)
-            majority_addresses, minority_addresses = who_is_in_majority(votes, majority)
+            majority_addresses, minority_addresses = who_is_in_vote_majority(
+                votes, majority
+            )
 
             # Distribute to all validators
             for addr in majority_addresses:
@@ -337,7 +349,9 @@ def distribute_round(
             appealant_address = appeal.appealantAddress
 
             majority = compute_majority(votes)
-            majority_addresses, minority_addresses = who_is_in_majority(votes, majority)
+            majority_addresses, minority_addresses = who_is_in_vote_majority(
+                votes, majority
+            )
 
             # Distribute to all validators
             for addr in majority_addresses:
@@ -369,7 +383,9 @@ def distribute_round(
 
     elif label == "split_previous_appeal_bond":
         majority = compute_majority(votes)
-        majority_addresses, minority_addresses = who_is_in_majority(votes, majority)
+        majority_addresses, minority_addresses = who_is_in_vote_majority(
+            votes, majority
+        )
 
         # Ensure round_index is valid for appeals
         if (
@@ -421,7 +437,9 @@ def distribute_round(
 
     elif label == "leader_timeout_150_previous_normal_round":
         majority = compute_majority(votes)
-        majority_addresses, minority_addresses = who_is_in_majority(votes, majority)
+        majority_addresses, minority_addresses = who_is_in_vote_majority(
+            votes, majority
+        )
         sender_address = transaction_budget.senderAddress
         first_addr = next(iter(votes.keys()), None)
 
@@ -457,6 +475,144 @@ def distribute_round(
     return fee_distribution
 
 
+def initialize_stakes(
+    fee_distribution: FeeDistribution, transaction_budget: TransactionBudget
+) -> FeeDistribution:
+    """
+    Initialize stakes based on distribution type.
+
+    Args:
+        fee_distribution: The fee distribution to initialize stakes for
+        transaction_budget: Budget containing staking parameters
+
+    Returns:
+        Updated fee distribution with stakes
+    """
+    for addr in fee_distribution.fees:
+        if transaction_budget.staking_distribution == "constant":
+            fee_distribution.fees[addr].stake = DEFAULT_STAKE
+        else:  # normal
+            stake = random.gauss(
+                transaction_budget.staking_mean,
+                transaction_budget.staking_variance**0.5,
+            )
+            fee_distribution.fees[addr].stake = max(0, stake)  # Ensure non-negative
+    return fee_distribution
+
+
+def replace_idle_participants(
+    transaction_results: TransactionRoundResults,
+    fee_distribution: FeeDistribution,
+    transaction_budget: TransactionBudget,
+) -> tuple[TransactionRoundResults, FeeDistribution]:
+    """
+    Slash idle validators and replace them with reserves.
+
+    Args:
+        transaction_results: Transaction rounds
+        fee_distribution: Initial fee distribution
+        transaction_budget: Budget parameters
+
+    Returns:
+        Tuple of (updated transaction results, updated fee distribution)
+    """
+    for i, round_obj in enumerate(transaction_results.rounds):
+        if round_obj.rotations:
+            rotation = round_obj.rotations[-1]
+            votes = rotation.votes
+
+            # Find idle validators
+            idle_addresses = [
+                addr for addr, vote in votes.items() if normalize_vote(vote) == "Idle"
+            ]
+
+            # Slash idle validators
+            for addr in idle_addresses:
+                if addr in fee_distribution.fees:
+                    # Slash 2% of stake
+                    fee_distribution.fees[addr].stake *= 0.98
+
+            # Replace idle validators with reserves
+            if idle_addresses:
+                new_votes = {
+                    addr: vote
+                    for addr, vote in votes.items()
+                    if normalize_vote(vote) != "Idle"
+                }
+                reserve_count = len(idle_addresses)
+
+                # Find available reserves
+                available_reserves = [
+                    addr
+                    for addr, vote in rotation.reserve_votes.items()
+                    if addr not in new_votes
+                ]
+
+                # Add reserves to replace idle validators
+                for i in range(min(reserve_count, len(available_reserves))):
+                    reserve_addr = available_reserves[i]
+                    new_votes[reserve_addr] = rotation.reserve_votes[reserve_addr]
+
+                    # Ensure reserve has a fee entry
+                    if reserve_addr not in fee_distribution.fees:
+                        fee_distribution.fees[reserve_addr] = FeeEntry()
+
+                        # Initialize stake for the new validator
+                        if transaction_budget.staking_distribution == "constant":
+                            fee_distribution.fees[reserve_addr].stake = DEFAULT_STAKE
+                        else:  # normal
+                            stake = random.gauss(
+                                transaction_budget.staking_mean,
+                                transaction_budget.staking_variance**0.5,
+                            )
+                            fee_distribution.fees[reserve_addr].stake = max(0, stake)
+
+                # Update votes in the rotation
+                rotation.votes = new_votes
+
+    return transaction_results, fee_distribution
+
+
+def handle_deterministic_violations(
+    transaction_results: TransactionRoundResults, fee_distribution: FeeDistribution
+) -> FeeDistribution:
+    """
+    Handle deterministic violations by slashing validators with hash mismatches.
+
+    Args:
+        transaction_results: Transaction rounds
+        fee_distribution: Fee distribution to update
+
+    Returns:
+        Updated fee distribution with slashed stakes
+    """
+    for i, round_obj in enumerate(transaction_results.rounds):
+        if round_obj.rotations:
+            rotation = round_obj.rotations[-1]
+            votes = rotation.votes
+
+            # Compute majority hash (independent of vote type)
+            majority_hash = compute_majority_hash(votes)
+
+            if majority_hash:
+                # Get addresses in hash majority and minority
+                hash_majority_addresses, hash_minority_addresses = (
+                    who_is_in_hash_majority(votes, majority_hash)
+                )
+
+                # Slash validators in hash minority
+                for addr in hash_minority_addresses:
+                    if (
+                        addr in fee_distribution.fees
+                        and normalize_vote(votes[addr]) != "Idle"
+                    ):
+                        # Leader is slashed more (5%) than validators (1%)
+                        slash_rate = 0.05 if addr == next(iter(votes.keys())) else 0.01
+                        fee_distribution.fees[addr].stake *= 1 - slash_rate
+
+    return fee_distribution
+
+
 def distribute_fees(
     fee_distribution: FeeDistribution,
     transaction_results: TransactionRoundResults,
@@ -475,8 +631,18 @@ def distribute_fees(
     Returns:
         Tuple of (updated fee distribution, round labels)
     """
+    # Initialize stakes
+    fee_distribution = initialize_stakes(fee_distribution, transaction_budget)
 
-    # TODO: Replace idle validators and slash them
+    # Replace idle validators and slash them
+    transaction_results, fee_distribution = replace_idle_participants(
+        transaction_results, fee_distribution, transaction_budget
+    )
+
+    # Handle deterministic violations (hash mismatches)
+    fee_distribution = handle_deterministic_violations(
+        transaction_results, fee_distribution
+    )
 
     # Get labels for all rounds
     labels = label_rounds(transaction_results)

@@ -6,6 +6,7 @@ fee distribution across all possible combinations of factors.
 """
 
 import itertools
+import random
 from typing import Dict, List, Tuple
 from custom_types import (
     FeeDistribution,
@@ -60,7 +61,8 @@ def generate_vote_combinations(
         "Agree",
         "Disagree",
         "Timeout",
-    ]  # Removed "Idle" as it's not in VoteType
+        "Idle",
+    ]  # Added "Idle" as it's now in VoteType
 
     if limit_combinations:
         # Use equivalence classes: focus on proportions rather than all permutations
@@ -89,13 +91,31 @@ def generate_vote_combinations(
         for vote_type_index, count in enumerate(dist):
             vote_type = vote_options[vote_type_index]
             for _ in range(count):
-                votes[addresses_pool[addr_index]] = vote_type
+                # Randomly add a hash (50% chance)
+                if random.random() < 0.5:
+                    hash_value = "0x" + "".join(
+                        random.choices("0123456789abcdef", k=40)
+                    )
+                    votes[addresses_pool[addr_index]] = [vote_type, hash_value]
+                else:
+                    votes[addresses_pool[addr_index]] = vote_type
                 addr_index += 1
 
         # Add LeaderReceipt to the first address (if any exist)
         if votes:
             first_addr = next(iter(votes.keys()))
-            votes[first_addr] = ["LeaderReceipt", votes[first_addr]]
+            leader_vote = votes[first_addr]
+            if isinstance(leader_vote, list):
+                votes[first_addr] = ["LeaderReceipt"] + leader_vote
+            else:
+                # Randomly add a hash to leader vote
+                if random.random() < 0.5:
+                    hash_value = "0x" + "".join(
+                        random.choices("0123456789abcdef", k=40)
+                    )
+                    votes[first_addr] = ["LeaderReceipt", leader_vote, hash_value]
+                else:
+                    votes[first_addr] = ["LeaderReceipt", leader_vote]
 
         vote_dictionaries.append(votes)
 
@@ -103,58 +123,54 @@ def generate_vote_combinations(
 
 
 def generate_combinatorial_scenarios(
-    committee_sizes: List[int] = [5, 7],
-    max_rounds: int = 2,
-    limit_combinations: bool = True,
-) -> List[Tuple[TransactionRoundResults, TransactionBudget]]:
+    committee_sizes: List[int], max_rounds: int, max_scenarios: int
+) -> List[Tuple[TransactionBudget, TransactionRoundResults]]:
     """
-    Generate all combinatorial scenarios
+    Generate combinatorial test scenarios
 
     Args:
         committee_sizes: List of committee sizes to test
-        max_rounds: Maximum number of rounds to test (beware of combinatorial explosion)
-        limit_combinations: Whether to use equivalence classes to limit combinations
+        max_rounds: Maximum number of rounds per scenario
+        max_scenarios: Maximum number of scenarios to generate
 
     Returns:
-        List of (transaction_results, transaction_budget) tuples
+        List of (budget, results) tuples
     """
     scenarios = []
 
-    # Generate for different numbers of rounds
-    for num_rounds in range(1, max_rounds + 1):
-        # For each round, enumerate possible committee sizes
-        for round_committee_sizes in itertools.product(
-            committee_sizes, repeat=num_rounds
-        ):
-            # Generate vote combinations for each round
-            round_vote_combinations = []
+    for size in committee_sizes:
+        for num_rounds in range(1, max_rounds + 1):
+            vote_combinations = generate_vote_combinations(
+                size, limit_combinations=True
+            )
+            round_combinations = generate_round_combinations(
+                vote_combinations, num_rounds
+            )
 
-            for size in round_committee_sizes:
-                round_vote_combinations.append(
-                    generate_vote_combinations(size, limit_combinations)
-                )
+            # Generate only a subset if there are too many combinations
+            if len(round_combinations) > sub_limit:
+                sampled_combinations = random.sample(round_combinations, sub_limit)
+            else:
+                sampled_combinations = round_combinations
 
-            # Combine vote combinations across rounds
-            for vote_combinations in itertools.product(*round_vote_combinations):
-                # Create rounds and rotations
+            for round_votes in sampled_combinations:
+                # Create a transaction with these rounds
                 rounds = []
-                for i, votes in enumerate(vote_combinations):
+                for votes in round_votes:
                     rotation = Rotation(votes=votes)
-                    round_obj = Round(rotations=[rotation])
-                    rounds.append(round_obj)
+                    round = Round(rotations=[rotation])
+                    rounds.append(round)
 
-                # Create transaction results
-                transaction_results = TransactionRoundResults(rounds=rounds)
-
-                # Create appeals for multi-round scenarios
+                # Add appeals if there are more than 1 round
                 appeals = []
                 if num_rounds > 1:
-                    appeal = Appeal(
-                        appealantAddress=addresses_pool[500], appealBond=300
-                    )
-                    appeals = [appeal]
+                    for i in range(num_rounds - 1):
+                        appeal = Appeal(appealantAddress=addresses_pool[i + 200])
+                        appeals.append(appeal)
 
-                # Create transaction budget
+                # Randomly decide staking distribution
+                staking_dist = random.choice(["constant", "normal"])
+
                 transaction_budget = TransactionBudget(
                     leaderTimeout=100,
                     validatorsTimeout=200,
@@ -162,9 +178,16 @@ def generate_combinatorial_scenarios(
                     rotations=[1] * num_rounds,
                     senderAddress=addresses_pool[100],
                     appeals=appeals,
+                    staking_distribution=staking_dist,
+                    staking_mean=1000 if staking_dist == "normal" else None,
+                    staking_variance=100 if staking_dist == "normal" else None,
                 )
 
-                scenarios.append((transaction_results, transaction_budget))
+                transaction_results = TransactionRoundResults(rounds=rounds)
+                scenarios.append((transaction_budget, transaction_results))
+
+                if len(scenarios) >= max_scenarios:
+                    return scenarios
 
     return scenarios
 
@@ -190,7 +213,7 @@ def run_combinatorial_tests(
 
     # Generate scenarios
     scenarios = generate_combinatorial_scenarios(
-        committee_sizes, max_rounds, limit_combinations
+        committee_sizes, max_rounds, max_scenarios
     )
 
     # Determine number of scenarios to run
@@ -201,7 +224,7 @@ def run_combinatorial_tests(
     )
 
     # Run tests
-    for i, (transaction_results, transaction_budget) in enumerate(
+    for i, (transaction_budget, transaction_results) in enumerate(
         scenarios[:actual_scenarios]
     ):
         # Calculate total number of votes for this scenario

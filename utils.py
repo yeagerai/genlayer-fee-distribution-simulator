@@ -1,9 +1,16 @@
 from functools import partial
 from math import ceil
-from typing import Dict, List
+from typing import Dict, List, Union
+import re
+from collections import defaultdict
 
-from custom_types import TransactionRoundResults
-from constants import round_sizes, penalty_reward_coefficient
+from custom_types import TransactionRoundResults, Round, FeeDistribution
+from constants import (
+    round_sizes,
+    penalty_reward_coefficient,
+    DEFAULT_STAKE,
+    DEFAULT_HASH,
+)
 
 
 def compute_appeal_bond(
@@ -70,15 +77,18 @@ class Colors:
     BOLD = "\033[1m"
     UNDERLINE = "\033[4m"
 
-    @staticmethod
-    def colorize(text, color):
-        return f"{color}{text}{Colors.ENDC}"
+    @classmethod
+    def colorize(cls, text: str, color: str) -> str:
+        if color:
+            return f"{color}{text}{cls.ENDC}"
+        else:
+            return text
 
 
 def pretty_print_fee_distribution(fee_distribution: Dict[str, Dict[str, int]]) -> None:
     """
     Pretty prints the fee distribution for addresses that have non-zero fees
-    in at least one field.
+    or modified stakes.
 
     Args:
         fee_distribution: Dictionary mapping addresses to fee entries
@@ -87,11 +97,28 @@ def pretty_print_fee_distribution(fee_distribution: Dict[str, Dict[str, int]]) -
         f"\n{Colors.BOLD}{Colors.HEADER}=== FEE DISTRIBUTION SUMMARY ==={Colors.ENDC}\n"
     )
 
-    # Find addresses with non-zero fees
+    # Find the base stake value (usually the initial stake before any slashing)
+    base_stake = DEFAULT_STAKE
+    if any("stake" in fees for fees in fee_distribution.values()):
+        stake_values = [fees.get("stake", 0) for fees in fee_distribution.values()]
+        if stake_values:
+            base_stake = max(stake_values)
+
+    # Filter for addresses with non-zero fees or modified stakes
     active_addresses = []
     for addr, roles in fee_distribution.items():
-        has_fees = any(fee != 0 for fee in roles.values())
-        if has_fees:
+        # Check if address has any non-zero fees
+        has_non_zero_fees = any(
+            fee != 0 for role, fee in roles.items() if role != "stake"
+        )
+
+        # Check if stake has been modified (slashed)
+        stake_modified = False
+        if "stake" in roles:
+            stake_modified = roles["stake"] < (base_stake * 0.99)
+
+        # Include address if it has fees or modified stake
+        if has_non_zero_fees or stake_modified:
             active_addresses.append(addr)
 
     if not active_addresses:
@@ -100,11 +127,12 @@ def pretty_print_fee_distribution(fee_distribution: Dict[str, Dict[str, int]]) -
 
     # Display count of addresses with fees
     print(
-        f"{Colors.CYAN}Total addresses with fees: {len(active_addresses)} out of {len(fee_distribution)}{Colors.ENDC}\n"
+        f"{Colors.CYAN}Active addresses: {len(active_addresses)} out of {len(fee_distribution)}{Colors.ENDC}\n"
     )
 
-    # Get all role types from the first address (assuming all addresses have the same roles)
-    roles = list(fee_distribution[active_addresses[0]].keys())
+    # Get all role types from the first address
+    first_addr = next(iter(fee_distribution.keys()))
+    roles = list(fee_distribution[first_addr].keys())
 
     # Calculate column width for consistent alignment
     column_width = 12
@@ -122,10 +150,12 @@ def pretty_print_fee_distribution(fee_distribution: Dict[str, Dict[str, int]]) -
     print(header)
     print(separator)
 
-    # Print each address with non-zero fees
+    # Print each active address
     for addr in active_addresses:
         roles_fees = fee_distribution[addr]
-        total_fees = sum(roles_fees.values())
+        total_fees = sum(
+            v for k, v in roles_fees.items() if k != "stake"
+        )  # Exclude stake from total
 
         # Format the address to show only first 10 and last 8 characters if too long
         if len(addr) > 30:
@@ -133,11 +163,17 @@ def pretty_print_fee_distribution(fee_distribution: Dict[str, Dict[str, int]]) -
         else:
             formatted_addr = addr
 
+        # Add slashing indicator if stake is lower than expected
+        if "stake" in roles_fees and roles_fees["stake"] < (base_stake * 0.99):
+            formatted_addr += " " + Colors.RED + "[SLASHED]" + Colors.ENDC
+
         # Print the row with fees for each role, color-coded by value
         row_parts = []
         for role in roles:
-            fee = roles_fees[role]
-            if fee > 0:
+            fee = roles_fees.get(role, 0)
+            if role == "stake":
+                color = Colors.BLUE  # Stake in blue
+            elif fee > 0:
                 color = Colors.GREEN
             elif fee == 0:
                 color = ""
@@ -147,7 +183,12 @@ def pretty_print_fee_distribution(fee_distribution: Dict[str, Dict[str, int]]) -
             row_parts.append(f"{Colors.colorize(str(fee), color):<{column_width}}")
 
         # Total is in bold green if positive
-        total_color = Colors.GREEN + Colors.BOLD if total_fees > 0 else ""
+        total_color = ""
+        if total_fees > 0:
+            total_color = Colors.GREEN + Colors.BOLD
+        elif total_fees < 0:
+            total_color = Colors.RED + Colors.BOLD
+
         total_str = f"{Colors.colorize(str(total_fees), total_color)}"
 
         row = f"{formatted_addr:<45} | " + " | ".join(row_parts) + f" | {total_str}"
@@ -157,22 +198,36 @@ def pretty_print_fee_distribution(fee_distribution: Dict[str, Dict[str, int]]) -
     print(separator)
 
     # Calculate and print totals
-    total_by_role = {
-        role: sum(fee_distribution[addr][role] for addr in active_addresses)
-        for role in roles
-    }
+    total_by_role = {}
+    for role in roles:
+        if role != "stake":  # Skip calculating total for stake
+            total_by_role[role] = sum(
+                fee_distribution[addr].get(role, 0) for addr in active_addresses
+            )
+
     grand_total = sum(total_by_role.values())
 
     total_row_parts = []
     for role in roles:
-        total = total_by_role[role]
-        color = Colors.GREEN + Colors.BOLD if total > 0 else ""
-        total_row_parts.append(f"{Colors.colorize(str(total), color):<{column_width}}")
+        if role != "stake":
+            total = total_by_role[role]
+            color = ""
+            if total > 0:
+                color = Colors.GREEN + Colors.BOLD
+            elif total < 0:
+                color = Colors.RED + Colors.BOLD
+
+            total_row_parts.append(
+                f"{Colors.colorize(str(total), color):<{column_width}}"
+            )
+        else:
+            # Just show a dash for stake total
+            total_row_parts.append(f"{'-':<{column_width}}")
 
     totals_row = (
         f"{Colors.BOLD}{'TOTAL':<45} | "
         + " | ".join(total_row_parts)
-        + f" | {Colors.colorize(str(grand_total), Colors.GREEN + Colors.BOLD)}{Colors.ENDC}"
+        + f" | {Colors.colorize(str(grand_total), Colors.GREEN + Colors.BOLD if grand_total >= 0 else Colors.RED + Colors.BOLD)}{Colors.ENDC}"
     )
     print(totals_row)
 
@@ -243,9 +298,25 @@ def pretty_print_transaction_results(
             for addr, vote in rotation.votes.items():
                 # Determine vote type and color
                 if isinstance(vote, list):
-                    vote_display = f"{vote[0]}, {vote[1]}"
-                    vote_type = vote[1]
-                    color = Colors.CYAN  # Leader votes in cyan
+                    if len(vote) == 3:
+                        vote_display = f"{vote[0]}, {vote[1]}, {vote[2]}"
+                    elif len(vote) == 2 and vote[0] not in [
+                        "LeaderReceipt",
+                        "LeaderTimeout",
+                    ]:
+                        vote_display = f"{vote[0]}, {vote[1]}"
+                    else:
+                        vote_display = f"{vote[0]}, {vote[1]}"
+                    vote_type = (
+                        vote[1]
+                        if vote[0] in ["LeaderReceipt", "LeaderTimeout"]
+                        else vote[0]
+                    )
+                    color = (
+                        Colors.CYAN
+                        if vote[0] in ["LeaderReceipt", "LeaderTimeout"]
+                        else Colors.ENDC
+                    )
                     vote_counts["Leader"] += 1
                 else:
                     vote_display = vote
@@ -273,6 +344,37 @@ def pretty_print_transaction_results(
                     formatted_addr = addr
 
                 print(f"    {formatted_addr}: {Colors.colorize(vote_display, color)}")
+
+            # Display reserve votes if any
+            if rotation.reserve_votes:
+                print(f"    {Colors.BOLD}Reserve Votes:{Colors.ENDC}")
+                for addr, vote in rotation.reserve_votes.items():
+                    # Determine vote type and display for reserves
+                    if isinstance(vote, list):
+                        if len(vote) == 3:
+                            vote_display = f"{vote[0]}, {vote[1]}, {vote[2]}"
+                        elif len(vote) == 2 and vote[0] not in [
+                            "LeaderReceipt",
+                            "LeaderTimeout",
+                        ]:
+                            vote_display = f"{vote[0]}, {vote[1]}"
+                        else:
+                            vote_display = f"{vote[0]}, {vote[1]}"
+                        vote_type = (
+                            vote[1]
+                            if vote[0] in ["LeaderReceipt", "LeaderTimeout"]
+                            else vote[0]
+                        )
+                    else:
+                        vote_display = vote
+                        vote_type = vote
+
+                    formatted_addr = (
+                        f"{addr[:8]}...{addr[-6:]}" if len(addr) > 20 else addr
+                    )
+                    print(
+                        f"      {formatted_addr}: {Colors.colorize(vote_display, Colors.BLUE)}"
+                    )
 
             # Print vote summary
             print(f"\n    {Colors.BOLD}Vote Summary:{Colors.ENDC}")

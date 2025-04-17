@@ -81,6 +81,7 @@ def run_scenario_1():
         rotations=[2],
         senderAddress=addresses_pool[10],
         appeals=[],
+        staking_distribution="constant",
     )
 
     print(f"{Colors.BOLD}{Colors.BLUE}Budget:{Colors.ENDC}")
@@ -175,63 +176,47 @@ def run_scenario_3():
     Scenario 3: Appeal scenario with sender and appealant.
     """
     print(
-        f"\n{Colors.BOLD}{Colors.RED}=== SCENARIO 3: APPEAL SCENARIO ==={Colors.ENDC}"
+        f"\n{Colors.BOLD}{Colors.GREEN}=== SCENARIO 3: APPEAL SCENARIO WITH IDLE VALIDATORS ==={Colors.ENDC}"
+    )
+    print(
+        f"{Colors.YELLOW}This scenario demonstrates an appeal round with idle validators being replaced.{Colors.ENDC}"
     )
 
-    # First round - normal round with disagreement
+    # Initialize fee distribution
+    fee_distribution = initialize_fee_distribution()
+
+    # First round
     rotation1 = Rotation(
         votes={
-            addresses_pool[0]: ["LeaderReceipt", "Agree"],
+            addresses_pool[0]: ["LeaderReceipt", "Agree", "0xabc"],
             addresses_pool[1]: "Disagree",
-            addresses_pool[2]: "Disagree",
-            addresses_pool[3]: "Disagree",
+            addresses_pool[2]: ["Disagree", "0x123"],
+            addresses_pool[3]: "Idle",
             addresses_pool[4]: "Timeout",
-        }
+        },
+        reserve_votes={addresses_pool[100]: ["Agree", "0xabc"]},
     )
 
-    round1 = Round(rotations=[rotation1])
-
-    # Second round - appeal round with agreement
+    # Second round
     rotation2 = Rotation(
         votes={
-            addresses_pool[5]: "Agree",
+            addresses_pool[5]: ["LeaderReceipt", "Agree"],
             addresses_pool[6]: "Agree",
             addresses_pool[7]: "Agree",
-            addresses_pool[8]: "Agree",
-            addresses_pool[9]: "Agree",
-            addresses_pool[10]: "Agree",
-            addresses_pool[11]: "Agree",
         }
     )
 
+    # Create rounds
+    round1 = Round(rotations=[rotation1])
     round2 = Round(rotations=[rotation2])
 
-    # Third round - normal round with agreement
-    rotation3 = Rotation(
-        votes={
-            addresses_pool[1]: ["LeaderReceipt", "Agree"],
-            addresses_pool[2]: "Agree",
-            addresses_pool[3]: "Agree",
-            addresses_pool[4]: "Agree",
-            addresses_pool[5]: "Agree",
-            addresses_pool[6]: "Agree",
-            addresses_pool[7]: "Agree",
-            addresses_pool[8]: "Agree",
-            addresses_pool[9]: "Agree",
-            addresses_pool[10]: "Agree",
-            addresses_pool[11]: "Agree",
-        }
-    )
+    # Create transaction results
+    transaction_results = TransactionRoundResults(rounds=[round1, round2])
 
-    round3 = Round(rotations=[rotation3])
+    # Create appeal object
+    appeal = Appeal(appealantAddress=addresses_pool[20])
 
-    # Create transaction results with two rounds
-    transaction_results = TransactionRoundResults(rounds=[round1, round2, round3])
-
-    # Create appeal
-    appeal = Appeal(appealantAddress=addresses_pool[15])
-
-    # Create transaction budget with appeal
+    # Create transaction budget
     transaction_budget = TransactionBudget(
         leaderTimeout=100,
         validatorsTimeout=200,
@@ -239,6 +224,9 @@ def run_scenario_3():
         rotations=[1, 2],
         senderAddress=addresses_pool[10],
         appeals=[appeal],
+        staking_distribution="normal",
+        staking_mean=1000,
+        staking_variance=100,
     )
 
     print(f"{Colors.BOLD}{Colors.BLUE}Budget:{Colors.ENDC}")
@@ -249,9 +237,6 @@ def run_scenario_3():
     print(
         f"  Appealant: {appeal.appealantAddress[:8]}...{appeal.appealantAddress[-6:]}\n"
     )
-
-    # Initialize fee distribution
-    fee_distribution = initialize_fee_distribution()
 
     print(f"{Colors.BOLD}{Colors.YELLOW}Computing fee distribution...{Colors.ENDC}\n")
 
