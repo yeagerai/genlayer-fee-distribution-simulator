@@ -39,7 +39,7 @@ round_sizes = [
     1535,
 ]
 
-penalty_reward_coefficient = 2
+penalty_reward_coefficient = 1
 
 DEFAULT_HASH = "0xdefault"
 DEFAULT_STAKE = 1000
