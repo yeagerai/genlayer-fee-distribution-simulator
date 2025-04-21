@@ -1,7 +1,7 @@
 from typing import Dict, List, Any, Tuple, Union, Optional
-from custom_types import VoteType, VoteValue, MajorityOutcome
+from fee_simulator.models.custom_types import VoteType, VoteValue, MajorityOutcome
 from collections import Counter
-from constants import DEFAULT_HASH
+from fee_simulator.models.constants import DEFAULT_HASH
 
 
 def normalize_vote(vote_value: VoteValue) -> VoteType:

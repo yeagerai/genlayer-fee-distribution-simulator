@@ -4,8 +4,12 @@ from typing import Dict, List, Union
 import re
 from collections import defaultdict
 
-from custom_types import TransactionRoundResults, Round, FeeDistribution
-from constants import (
+from fee_simulator.models.custom_types import (
+    TransactionRoundResults,
+    Round,
+    FeeDistribution,
+)
+from fee_simulator.models.constants import (
     round_sizes,
     penalty_reward_coefficient,
     DEFAULT_STAKE,

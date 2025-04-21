@@ -1,14 +1,17 @@
 from typing import List
 from math import floor
-from majority import (
+from fee_simulator.core.majority import (
     compute_majority,
     compute_majority_hash,
     normalize_vote,
     who_is_in_hash_majority,
     who_is_in_vote_majority,
 )
-from utils import pretty_print_fee_distribution, compute_appeal_bond_partial
-from custom_types import (
+from fee_simulator.core.utils import (
+    pretty_print_fee_distribution,
+    compute_appeal_bond_partial,
+)
+from fee_simulator.models.custom_types import (
     FeeEntry,
     Round,
     TransactionBudget,
@@ -16,7 +19,11 @@ from custom_types import (
     TransactionRoundResults,
     RoundLabel,
 )
-from constants import penalty_reward_coefficient, DEFAULT_STAKE, DEFAULT_HASH
+from fee_simulator.models.constants import (
+    penalty_reward_coefficient,
+    DEFAULT_STAKE,
+    DEFAULT_HASH,
+)
 import random
 
 

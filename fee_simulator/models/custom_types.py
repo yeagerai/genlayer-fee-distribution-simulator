@@ -118,12 +118,9 @@ class FeeEntry(BaseModel):
     Fee entry for an address, containing fees for different roles.
     """
 
-    leader: int = Field(default=0, ge=0)
     leader_node: int = Field(default=0, ge=0)
     validator_node: int = Field(default=0, ge=0)
-    sender: int = Field(default=0, ge=0)
     sender_node: int = Field(default=0, ge=0)
-    appealant: int = Field(default=0, ge=0)
     appealant_node: int = Field(default=0, ge=0)
     stake: float = Field(default=0, ge=0)
 
