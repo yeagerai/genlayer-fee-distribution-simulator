@@ -9,8 +9,13 @@ from fee_simulator.core.utils import (
     pretty_print_transaction_results,
     pretty_print_fee_distribution,
     initialize_fee_distribution,
+    compute_total_fees,
 )
-from fee_simulator.models.constants import addresses_pool
+from fee_simulator.models.constants import (
+    addresses_pool,
+    penalty_reward_coefficient,
+    DEFAULT_STAKE,
+)
 
 
 def test_idle_round(default_budget: TransactionBudget, verbose: bool = True):
@@ -23,7 +28,11 @@ def test_idle_round(default_budget: TransactionBudget, verbose: bool = True):
             addresses_pool[2]: "Idle",  # Validator 2 is idle
             addresses_pool[3]: "Agree",  # Validator 3 agrees
             addresses_pool[4]: "Idle",  # Validator 4 is idle
-        }
+        },
+        reserve_votes={
+            addresses_pool[5]: "Agree",
+            addresses_pool[6]: "Disagree",
+        },
     )
     round = Round(rotations=[rotation])
     transaction_results = TransactionRoundResults(rounds=[round])
@@ -35,7 +44,7 @@ def test_idle_round(default_budget: TransactionBudget, verbose: bool = True):
         fee_distribution=fee_distribution,
         transaction_results=transaction_results,
         transaction_budget=transaction_budget,
-        verbose=True,  # Set to True to ensure printing
+        verbose=False,  # Set to True to ensure printing
     )
 
     # Print if verbose
@@ -45,24 +54,36 @@ def test_idle_round(default_budget: TransactionBudget, verbose: bool = True):
 
     # Assertions (adjust based on expected behavior)
     # Example: Check that idle validators receive no fees or are penalized
-    assert result.fees[addresses_pool[0]].leader_node > 0, "Leader should receive a fee"
     assert (
-        result.fees[addresses_pool[1]].validator_node > 0
-    ), "Agree validator should receive a fee"
+        result.fees[addresses_pool[2]].stake == DEFAULT_STAKE * 0.98
+    ), "Idle validator's stake should be slashed"
     assert (
-        result.fees[addresses_pool[2]].validator_node == 0
-    ), "Idle validator should receive no fee"
+        result.fees[addresses_pool[4]].stake == DEFAULT_STAKE * 0.98
+    ), "Idle validator's stake should be slashed"
+
     assert (
-        result.fees[addresses_pool[3]].validator_node > 0
-    ), "Agree validator should receive a fee"
+        compute_total_fees(result.fees[addresses_pool[0]])
+        == default_budget.validatorsTimeout + default_budget.leaderTimeout
+    ), " Leader should have 100 (leader) + 200 (validator, no majority)"
     assert (
-        result.fees[addresses_pool[4]].validator_node == 0
-    ), "Idle validator should receive no fee"
+        compute_total_fees(result.fees[addresses_pool[1]])
+        == default_budget.validatorsTimeout
+    ), "Validator in majority should have 200"
     assert (
-        result.fees[addresses_pool[2]].stake == default_budget.staking_mean
-        or result.fees[addresses_pool[2]].stake < default_budget.staking_mean
-    ), "Idle validator's stake should be unchanged or slashed"
+        compute_total_fees(result.fees[addresses_pool[2]]) == 0
+    ), "Validator penalized for not being in majority"
     assert (
-        result.fees[addresses_pool[4]].stake == default_budget.staking_mean
-        or result.fees[addresses_pool[4]].stake < default_budget.staking_mean
-    ), "Idle validator's stake should be unchanged or slashed"
+        compute_total_fees(result.fees[addresses_pool[3]])
+        == default_budget.validatorsTimeout
+    ), "Validator in majority should have 200"
+    assert (
+        compute_total_fees(result.fees[addresses_pool[4]]) == 0
+    ), "Validator penalized for not being in majority"
+    assert (
+        compute_total_fees(result.fees[addresses_pool[5]])
+        == default_budget.validatorsTimeout
+    ), "Validator in majority should have 200"
+    assert (
+        compute_total_fees(result.fees[addresses_pool[6]])
+        == -default_budget.validatorsTimeout * penalty_reward_coefficient
+    ), "Validator penalized for not being in majority"

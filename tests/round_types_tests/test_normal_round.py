@@ -48,19 +48,24 @@ def test_normal_round(default_budget, verbose):
         "normal_round"
     ], f"Expected ['normal_round'], got {round_labels}"
     assert (
-        compute_total_fees(result.fees[addresses_pool[0]]) == 300
+        compute_total_fees(result.fees[addresses_pool[0]])
+        == default_budget.leaderTimeout + default_budget.validatorsTimeout
     ), "Leader should have 100 (leader) + 200 (validator)"
     assert (
-        compute_total_fees(result.fees[addresses_pool[1]]) == 200
+        compute_total_fees(result.fees[addresses_pool[1]])
+        == default_budget.validatorsTimeout
     ), "Validator should have 200"
     assert (
-        compute_total_fees(result.fees[addresses_pool[2]]) == 200
+        compute_total_fees(result.fees[addresses_pool[2]])
+        == default_budget.validatorsTimeout
     ), "Validator should have 200"
     assert (
-        compute_total_fees(result.fees[addresses_pool[3]]) == 200
+        compute_total_fees(result.fees[addresses_pool[3]])
+        == default_budget.validatorsTimeout
     ), "Validator should have 200"
     assert (
-        compute_total_fees(result.fees[addresses_pool[4]]) == 200
+        compute_total_fees(result.fees[addresses_pool[4]])
+        == default_budget.validatorsTimeout
     ), "Validator should have 200"
     assert (
         compute_total_fees(result.fees[addresses_pool[10]])

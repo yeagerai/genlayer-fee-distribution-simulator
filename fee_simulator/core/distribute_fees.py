@@ -422,6 +422,12 @@ def distribute_round(
                         * transaction_budget.validatorsTimeout
                     )
 
+            first_addr = next(iter(votes.keys()), None)
+            if first_addr and first_addr in fee_distribution.fees:
+                fee_distribution.fees[
+                    first_addr
+                ].leader_node += transaction_budget.leaderTimeout
+
     elif label == "leader_timeout_50_previous_appeal_bond":
         sender_address = transaction_budget.senderAddress
         first_addr = next(iter(votes.keys()), None)

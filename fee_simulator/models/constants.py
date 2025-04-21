@@ -42,7 +42,7 @@ round_sizes = [
 penalty_reward_coefficient = 1
 
 DEFAULT_HASH = "0xdefault"
-DEFAULT_STAKE = 1000
+DEFAULT_STAKE = 4000000
 
 # Generate pool of 2000 random addresses
 addresses_pool = [generate_random_address() for _ in range(2000)]
