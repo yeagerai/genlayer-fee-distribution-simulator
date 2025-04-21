@@ -1,20 +1,34 @@
 from functools import partial
 from math import ceil
-from typing import Dict, List, Union
-import re
-from collections import defaultdict
+from typing import Dict, List
 
 from fee_simulator.models.custom_types import (
     TransactionRoundResults,
-    Round,
     FeeDistribution,
+    FeeEntry,
 )
 from fee_simulator.models.constants import (
     round_sizes,
     penalty_reward_coefficient,
     DEFAULT_STAKE,
-    DEFAULT_HASH,
+    addresses_pool,
 )
+
+
+def initialize_fee_distribution() -> FeeDistribution:
+    """Initialize a new fee distribution object."""
+    fee_entries = {addr: FeeEntry() for addr in addresses_pool}
+    return FeeDistribution(fees=fee_entries)
+
+
+def compute_total_fees(fee_entry: FeeEntry) -> int:
+    """Compute total fees for a FeeEntry, excluding stake."""
+    return (
+        fee_entry.leader_node
+        + fee_entry.validator_node
+        + fee_entry.sender_node
+        + fee_entry.appealant_node
+    )
 
 
 def compute_appeal_bond(
@@ -89,13 +103,13 @@ class Colors:
             return text
 
 
-def pretty_print_fee_distribution(fee_distribution: Dict[str, Dict[str, int]]) -> None:
+def pretty_print_fee_distribution(fee_distribution: FeeDistribution) -> None:
     """
     Pretty prints the fee distribution for addresses that have non-zero fees
     or modified stakes.
 
     Args:
-        fee_distribution: Dictionary mapping addresses to fee entries
+        fee_distribution: FeeDistribution object containing fees as FeeEntry objects
     """
     print(
         f"\n{Colors.BOLD}{Colors.HEADER}=== FEE DISTRIBUTION SUMMARY ==={Colors.ENDC}\n"
@@ -103,23 +117,29 @@ def pretty_print_fee_distribution(fee_distribution: Dict[str, Dict[str, int]]) -
 
     # Find the base stake value (usually the initial stake before any slashing)
     base_stake = DEFAULT_STAKE
-    if any("stake" in fees for fees in fee_distribution.values()):
-        stake_values = [fees.get("stake", 0) for fees in fee_distribution.values()]
+    if any(
+        fee_entry.stake != DEFAULT_STAKE for fee_entry in fee_distribution.fees.values()
+    ):
+        stake_values = [fee_entry.stake for fee_entry in fee_distribution.fees.values()]
         if stake_values:
             base_stake = max(stake_values)
 
     # Filter for addresses with non-zero fees or modified stakes
     active_addresses = []
-    for addr, roles in fee_distribution.items():
+    for addr, fee_entry in fee_distribution.fees.items():
         # Check if address has any non-zero fees
         has_non_zero_fees = any(
-            fee != 0 for role, fee in roles.items() if role != "stake"
+            fee != 0
+            for fee in [
+                fee_entry.leader_node,
+                fee_entry.validator_node,
+                fee_entry.sender_node,
+                fee_entry.appealant_node,
+            ]
         )
 
         # Check if stake has been modified (slashed)
-        stake_modified = False
-        if "stake" in roles:
-            stake_modified = roles["stake"] < (base_stake * 0.99)
+        stake_modified = fee_entry.stake < (base_stake * 0.99)
 
         # Include address if it has fees or modified stake
         if has_non_zero_fees or stake_modified:
@@ -131,12 +151,11 @@ def pretty_print_fee_distribution(fee_distribution: Dict[str, Dict[str, int]]) -
 
     # Display count of addresses with fees
     print(
-        f"{Colors.CYAN}Active addresses: {len(active_addresses)} out of {len(fee_distribution)}{Colors.ENDC}\n"
+        f"{Colors.CYAN}Active addresses: {len(active_addresses)} out of {len(fee_distribution.fees)}{Colors.ENDC}\n"
     )
 
-    # Get all role types from the first address
-    first_addr = next(iter(fee_distribution.keys()))
-    roles = list(fee_distribution[first_addr].keys())
+    # Define role types
+    roles = ["leader_node", "validator_node", "sender_node", "appealant_node", "stake"]
 
     # Calculate column width for consistent alignment
     column_width = 12
@@ -156,9 +175,12 @@ def pretty_print_fee_distribution(fee_distribution: Dict[str, Dict[str, int]]) -
 
     # Print each active address
     for addr in active_addresses:
-        roles_fees = fee_distribution[addr]
-        total_fees = sum(
-            v for k, v in roles_fees.items() if k != "stake"
+        fee_entry = fee_distribution.fees[addr]
+        total_fees = (
+            fee_entry.leader_node
+            + fee_entry.validator_node
+            + fee_entry.sender_node
+            + fee_entry.appealant_node
         )  # Exclude stake from total
 
         # Format the address to show only first 10 and last 8 characters if too long
@@ -168,13 +190,13 @@ def pretty_print_fee_distribution(fee_distribution: Dict[str, Dict[str, int]]) -
             formatted_addr = addr
 
         # Add slashing indicator if stake is lower than expected
-        if "stake" in roles_fees and roles_fees["stake"] < (base_stake * 0.99):
+        if fee_entry.stake < (base_stake * 0.99):
             formatted_addr += " " + Colors.RED + "[SLASHED]" + Colors.ENDC
 
         # Print the row with fees for each role, color-coded by value
         row_parts = []
         for role in roles:
-            fee = roles_fees.get(role, 0)
+            fee = getattr(fee_entry, role)
             if role == "stake":
                 color = Colors.BLUE  # Stake in blue
             elif fee > 0:
@@ -202,12 +224,16 @@ def pretty_print_fee_distribution(fee_distribution: Dict[str, Dict[str, int]]) -
     print(separator)
 
     # Calculate and print totals
-    total_by_role = {}
-    for role in roles:
-        if role != "stake":  # Skip calculating total for stake
-            total_by_role[role] = sum(
-                fee_distribution[addr].get(role, 0) for addr in active_addresses
-            )
+    total_by_role = {
+        "leader_node": 0,
+        "validator_node": 0,
+        "sender_node": 0,
+        "appealant_node": 0,
+    }
+    for addr in active_addresses:
+        fee_entry = fee_distribution.fees[addr]
+        for role in total_by_role:
+            total_by_role[role] += getattr(fee_entry, role)
 
     grand_total = sum(total_by_role.values())
 
@@ -220,7 +246,6 @@ def pretty_print_fee_distribution(fee_distribution: Dict[str, Dict[str, int]]) -
                 color = Colors.GREEN + Colors.BOLD
             elif total < 0:
                 color = Colors.RED + Colors.BOLD
-
             total_row_parts.append(
                 f"{Colors.colorize(str(total), color):<{column_width}}"
             )

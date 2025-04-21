@@ -1,33 +1,19 @@
-import pytest
 from fee_simulator.models.custom_types import (
-    FeeDistribution,
-    FeeEntry,
-    TransactionBudget,
     TransactionRoundResults,
     Round,
     Rotation,
 )
 from fee_simulator.core.distribute_fees import distribute_fees
 from fee_simulator.models.constants import addresses_pool
+from fee_simulator.core.utils import (
+    initialize_fee_distribution,
+    compute_total_fees,
+    pretty_print_transaction_results,
+    pretty_print_fee_distribution,
+)
 
 
-def initialize_fee_distribution() -> FeeDistribution:
-    """Initialize a new fee distribution object."""
-    fee_entries = {addr: FeeEntry() for addr in addresses_pool}
-    return FeeDistribution(fees=fee_entries)
-
-
-def compute_total_fees(fee_entry: FeeEntry) -> int:
-    """Compute total fees for a FeeEntry, excluding stake."""
-    return (
-        fee_entry.leader_node
-        + fee_entry.validator_node
-        + fee_entry.sender_node
-        + fee_entry.appealant_node
-    )
-
-
-def test_normal_round():
+def test_normal_round(default_budget, verbose):
     """Test fee distribution for a normal round with all validators agreeing."""
     # Setup
     rotation = Rotation(
@@ -41,15 +27,7 @@ def test_normal_round():
     )
     round = Round(rotations=[rotation])
     transaction_results = TransactionRoundResults(rounds=[round])
-    transaction_budget = TransactionBudget(
-        leaderTimeout=100,
-        validatorsTimeout=200,
-        appealRounds=1,
-        rotations=[1],
-        senderAddress=addresses_pool[10],
-        appeals=[],
-        staking_distribution="constant",
-    )
+    transaction_budget = default_budget
     fee_distribution = initialize_fee_distribution()
 
     # Execute
@@ -59,6 +37,11 @@ def test_normal_round():
         transaction_budget=transaction_budget,
         verbose=False,
     )
+
+    # Print if verbose
+    if verbose:
+        pretty_print_transaction_results(transaction_results, round_labels)
+        pretty_print_fee_distribution(result)
 
     # Assert
     assert round_labels == [
@@ -80,5 +63,12 @@ def test_normal_round():
         compute_total_fees(result.fees[addresses_pool[4]]) == 200
     ), "Validator should have 200"
     assert (
-        compute_total_fees(result.fees[addresses_pool[10]]) == 0
+        compute_total_fees(result.fees[addresses_pool[10]])
+        == 0  # Maybe this should be -1100 ?
     ), "Sender should have no fees in normal round"
+
+    assert all(
+        compute_total_fees(result.fees[addresses_pool[i]]) == 0
+        for i in range(len(addresses_pool))
+        if i not in [0, 1, 2, 3, 4, 10]
+    ), "Everyone else should have no fees in normal round"
