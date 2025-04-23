@@ -9,9 +9,11 @@ from fee_simulator.models.constants import addresses_pool, penalty_reward_coeffi
 from fee_simulator.core.utils import (
     initialize_fee_distribution,
     compute_total_fees,
-    pretty_print_transaction_results,
-    pretty_print_fee_distribution,
     compute_total_cost,
+)
+from fee_simulator.core.display import (
+    pretty_print_fee_distribution,
+    pretty_print_transaction_results,
 )
 
 leaderTimeout = 100
@@ -50,7 +52,6 @@ def test_normal_round(verbose):
         fee_distribution=fee_distribution,
         transaction_results=transaction_results,
         transaction_budget=transaction_budget,
-        verbose=False,
     )
 
     # Print if verbose
@@ -112,7 +113,6 @@ def test_normal_round_with_minority_penalties(verbose):
         fee_distribution=fee_distribution,
         transaction_results=transaction_results,
         transaction_budget=transaction_budget,
-        verbose=False,
     )
 
     # Print if verbose
@@ -180,7 +180,6 @@ def test_normal_round_no_majority(verbose):
         fee_distribution=fee_distribution,
         transaction_results=transaction_results,
         transaction_budget=transaction_budget,
-        verbose=False,
     )
 
     # Print if verbose
@@ -242,7 +241,6 @@ def test_normal_round_no_majority_disagree(verbose):
         fee_distribution=fee_distribution,
         transaction_results=transaction_results,
         transaction_budget=transaction_budget,
-        verbose=False,
     )
 
     # Print if verbose

@@ -16,8 +16,11 @@ from fee_simulator.models.constants import addresses_pool
 from fee_simulator.core.utils import (
     initialize_fee_distribution,
     compute_total_fees,
-    pretty_print_transaction_results,
+)
+
+from fee_simulator.core.display import (
     pretty_print_fee_distribution,
+    pretty_print_transaction_results,
 )
 
 leaderTimeout = 100
@@ -91,7 +94,6 @@ def test_appeal_leader_successful(verbose):
         fee_distribution=fee_distribution,
         transaction_results=transaction_results,
         transaction_budget=transaction_budget,
-        verbose=False,
     )
 
     # Print if verbose
@@ -99,22 +101,21 @@ def test_appeal_leader_successful(verbose):
         pretty_print_transaction_results(transaction_results, round_labels)
         pretty_print_fee_distribution(result)
 
-    # Assert
+    # Round Label Assert
+    assert round_labels == [
+        "validators_penalty_only_round",
+        "appeal_leader_successful",
+        "normal_round",
+    ], f"Expected ['validators_penalty_only_round', 'appeal_leader_successful', 'normal_round'], got {round_labels}"
+
+    # Everyone Else 0 Fees Assert
+    assert all(
+        compute_total_fees(result.fees[addresses_pool[i]]) == 0
+        for i in range(len(addresses_pool))
+        if i not in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 23, 1999]
+    ), "Everyone else should have no fees in normal round"
+
+    # Appealant Fees Assert
     assert (
-        "appeal_leader_successful" in round_labels
-    ), f"Expected 'appeal_leader_successful', got {round_labels}"
-    appealant_fees = compute_total_fees(result.fees[addresses_pool[23]])
-    assert (
-        appealant_fees == default_budget.leaderTimeout
-    ), f"Appealant should gain bond + 100, got {appealant_fees}"
-    assert (
-        compute_total_fees(result.fees[addresses_pool[5]]) == 300
-    ), "Leader in appeal round should have 100 (leader) + 200 (validator)"
-    for addr in addresses_pool[6:9]:
-        assert (
-            compute_total_fees(result.fees[addr]) == 200
-        ), "Validators in majority (appeal round) should have 200"
-    for addr in addresses_pool[9:12]:
-        assert (
-            compute_total_fees(result.fees[addr]) == -400
-        ), "Validators in minority (appeal round) should lose 400"
+        compute_total_fees(result.fees[addresses_pool[23]]) == leaderTimeout
+    ), "Appealant should have fees equal to the leaderTimeout"

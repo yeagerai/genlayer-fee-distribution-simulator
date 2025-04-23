@@ -8,11 +8,11 @@ from fee_simulator.core.majority import (
     who_is_in_vote_majority,
 )
 from fee_simulator.core.utils import (
-    pretty_print_fee_distribution,
     compute_appeal_bond_partial,
     compute_total_cost,
     compute_total_fees,
 )
+
 from fee_simulator.models.custom_types import (
     FeeEntry,
     Round,
@@ -632,7 +632,6 @@ def distribute_fees(
     fee_distribution: FeeDistribution,
     transaction_results: TransactionRoundResults,
     transaction_budget: TransactionBudget,
-    verbose: bool = False,
 ) -> tuple[FeeDistribution, List[RoundLabel]]:
     """
     Compute total fee distribution across all rounds.
@@ -711,9 +710,5 @@ def distribute_fees(
     refund = compute_total_cost(transaction_budget) + have_to_pay
     if refund > 0:
         fee_distribution.fees[transaction_budget.senderAddress].sender_node += refund
-
-    if verbose:
-        # Convert to dict for pretty printing
-        pretty_print_fee_distribution(fee_distribution.dict()["fees"])
 
     return fee_distribution, labels

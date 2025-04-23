@@ -6,10 +6,12 @@ from fee_simulator.models.custom_types import (
 )
 from fee_simulator.core.distribute_fees import distribute_fees
 from fee_simulator.core.utils import (
-    pretty_print_transaction_results,
-    pretty_print_fee_distribution,
     initialize_fee_distribution,
     compute_total_fees,
+)
+from fee_simulator.core.display import (
+    pretty_print_fee_distribution,
+    pretty_print_transaction_results,
 )
 from fee_simulator.models.constants import (
     addresses_pool,
@@ -56,7 +58,6 @@ def test_idle_round(verbose: bool = True):
         fee_distribution=fee_distribution,
         transaction_results=transaction_results,
         transaction_budget=transaction_budget,
-        verbose=False,  # Set to True to ensure printing
     )
 
     # Print if verbose
