@@ -6,6 +6,7 @@ from fee_simulator.models.custom_types import (
     TransactionRoundResults,
     FeeDistribution,
     FeeEntry,
+    TransactionBudget,
 )
 from fee_simulator.models.constants import (
     round_sizes,
@@ -19,6 +20,24 @@ def initialize_fee_distribution() -> FeeDistribution:
     """Initialize a new fee distribution object."""
     fee_entries = {addr: FeeEntry() for addr in addresses_pool}
     return FeeDistribution(fees=fee_entries)
+
+
+def compute_total_cost(transaction_budget: TransactionBudget) -> int:
+    if transaction_budget.appealRounds == 0:
+        num_rounds = 1
+    else:
+        num_rounds = transaction_budget.appealRounds * 2
+    total_cost = 0
+    for i in range(num_rounds):
+        if i % 2 == 0:
+            num_rotations = transaction_budget.rotations[i // 2]
+        else:
+            num_rotations = 1
+        total_cost += (num_rotations + 1) * (
+            transaction_budget.leaderTimeout
+            + round_sizes[i] * transaction_budget.validatorsTimeout
+        )
+    return total_cost
 
 
 def compute_total_fees(fee_entry: FeeEntry) -> int:

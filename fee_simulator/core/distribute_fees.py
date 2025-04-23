@@ -10,6 +10,8 @@ from fee_simulator.core.majority import (
 from fee_simulator.core.utils import (
     pretty_print_fee_distribution,
     compute_appeal_bond_partial,
+    compute_total_cost,
+    compute_total_fees,
 )
 from fee_simulator.models.custom_types import (
     FeeEntry,
@@ -644,6 +646,14 @@ def distribute_fees(
     Returns:
         Tuple of (updated fee distribution, round labels)
     """
+
+    # Subtract total cost from sender address
+    sender_address = transaction_budget.senderAddress
+    if sender_address in fee_distribution.fees:
+        fee_distribution.fees[sender_address].sender_node -= compute_total_cost(
+            transaction_budget
+        )
+
     # Initialize stakes
     fee_distribution = initialize_stakes(fee_distribution, transaction_budget)
 
@@ -663,6 +673,18 @@ def distribute_fees(
     # Process each round with its label
     for i, round_obj in enumerate(transaction_results.rounds):
         if i < len(labels):
+
+            # Subtract appeal bond from appealant address
+            if i % 2 == 1:
+                appealant_address = transaction_budget.appeals[i // 2].appealantAddress
+                fee_distribution.fees[
+                    appealant_address
+                ].appealant_node -= compute_appeal_bond_partial(
+                    normal_round_index=i - 1,
+                    leader_timeout=transaction_budget.leaderTimeout,
+                    validators_timeout=transaction_budget.validatorsTimeout,
+                )
+
             fee_distribution = distribute_round(
                 round=round_obj,
                 round_index=i,
@@ -670,6 +692,25 @@ def distribute_fees(
                 transaction_budget=transaction_budget,
                 fee_distribution=fee_distribution,
             )
+
+    # Refund sender negative fees if necessary
+    # TODO: toppers (users that top up the transaction) should be refunded proportionally to their spending
+    positive_fees = {
+        addr: compute_total_fees(fee)
+        for addr, fee in fee_distribution.fees.items()
+        if compute_total_fees(fee) > 0
+    }
+    negative_fees_but_sender = {
+        addr: compute_total_fees(fee)
+        for addr, fee in fee_distribution.fees.items()
+        if compute_total_fees(fee) < 0 and addr != transaction_budget.senderAddress
+    }
+    have_to_pay = -1 * (
+        sum(negative_fees_but_sender.values()) + sum(positive_fees.values())
+    )
+    refund = compute_total_cost(transaction_budget) + have_to_pay
+    if refund > 0:
+        fee_distribution.fees[transaction_budget.senderAddress].sender_node += refund
 
     if verbose:
         # Convert to dict for pretty printing

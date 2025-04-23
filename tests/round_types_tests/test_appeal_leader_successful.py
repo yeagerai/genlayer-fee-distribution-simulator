@@ -3,3 +3,118 @@
 # normal round
 
 # appealant gana su bond + leader_timeout
+import pytest
+from fee_simulator.models.custom_types import (
+    TransactionRoundResults,
+    Round,
+    Rotation,
+    Appeal,
+    TransactionBudget,
+)
+from fee_simulator.core.distribute_fees import distribute_fees
+from fee_simulator.models.constants import addresses_pool
+from fee_simulator.core.utils import (
+    initialize_fee_distribution,
+    compute_total_fees,
+    pretty_print_transaction_results,
+    pretty_print_fee_distribution,
+)
+
+leaderTimeout = 100
+validatorsTimeout = 200
+
+default_budget = TransactionBudget(
+    leaderTimeout=leaderTimeout,
+    validatorsTimeout=validatorsTimeout,
+    appealRounds=1,
+    rotations=[0, 0],
+    senderAddress=addresses_pool[1999],
+    appeals=[],
+    staking_distribution="constant",
+)
+
+
+def test_appeal_leader_successful(verbose):
+    """Test appeal_leader_successful: normal round (undetermined), appeal successful, normal round."""
+    # Setup
+    # First round: 5 validators, undetermined (2 Agree, 2 Disagree, 1 Timeout)
+    rotation1 = Rotation(
+        votes={
+            addresses_pool[0]: ["LeaderReceipt", "Agree"],
+            addresses_pool[1]: "Agree",
+            addresses_pool[2]: "Disagree",
+            addresses_pool[3]: "Disagree",
+            addresses_pool[4]: "Timeout",
+        }
+    )
+    # Second round (appeal): 7 validators, majority Agree
+    rotation2 = Rotation(
+        votes={
+            addresses_pool[5]: ["LeaderReceipt", "Agree"],
+            addresses_pool[6]: "Agree",
+            addresses_pool[7]: "Agree",
+            addresses_pool[8]: "Agree",
+            addresses_pool[9]: "Disagree",
+            addresses_pool[10]: "Disagree",
+            addresses_pool[11]: "Timeout",
+        }
+    )
+    # Third round: 11 validators, majority Agree
+    rotation3 = Rotation(
+        votes={
+            addresses_pool[1]: ["LeaderReceipt", "Agree"],
+            addresses_pool[2]: "Agree",
+            addresses_pool[3]: "Agree",
+            addresses_pool[4]: "Agree",
+            addresses_pool[5]: "Agree",
+            addresses_pool[6]: "Agree",
+            addresses_pool[7]: "Disagree",
+            addresses_pool[8]: "Disagree",
+            addresses_pool[9]: "Disagree",
+            addresses_pool[10]: "Timeout",
+            addresses_pool[11]: "Timeout",
+        }
+    )
+    transaction_results = TransactionRoundResults(
+        rounds=[
+            Round(rotations=[rotation1]),
+            Round(rotations=[rotation2]),
+            Round(rotations=[rotation3]),
+        ]
+    )
+    transaction_budget = default_budget
+    transaction_budget.appeals = [Appeal(appealantAddress=addresses_pool[23])]
+    fee_distribution = initialize_fee_distribution()
+
+    # Execute
+    result, round_labels = distribute_fees(
+        fee_distribution=fee_distribution,
+        transaction_results=transaction_results,
+        transaction_budget=transaction_budget,
+        verbose=False,
+    )
+
+    # Print if verbose
+    if verbose:
+        pretty_print_transaction_results(transaction_results, round_labels)
+        pretty_print_fee_distribution(result)
+
+    # Assert
+    assert (
+        "appeal_leader_successful" in round_labels
+    ), f"Expected 'appeal_leader_successful', got {round_labels}"
+    appealant_fees = compute_total_fees(result.fees[addresses_pool[23]])
+    assert (
+        appealant_fees == default_budget.leaderTimeout
+    ), f"Appealant should gain bond + 100, got {appealant_fees}"
+    assert (
+        compute_total_fees(result.fees[addresses_pool[5]]) == 300
+    ), "Leader in appeal round should have 100 (leader) + 200 (validator)"
+    for addr in addresses_pool[6:9]:
+        assert (
+            compute_total_fees(result.fees[addr]) == 200
+        ), "Validators in majority (appeal round) should have 200"
+    for addr in addresses_pool[9:12]:
+        assert (
+            compute_total_fees(result.fees[addr]) == -400
+        ), "Validators in minority (appeal round) should lose 400"

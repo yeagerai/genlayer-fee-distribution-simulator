@@ -16,17 +16,3 @@ def pytest_addoption(parser):
 def verbose(request):
     """Fixture to determine if verbose output is enabled."""
     return request.config.getoption("--verbose-output")
-
-
-@pytest.fixture
-def default_budget():
-    """Fixture for a default transaction budget."""
-    return TransactionBudget(
-        leaderTimeout=100,
-        validatorsTimeout=200,
-        appealRounds=1,
-        rotations=[1],
-        senderAddress=addresses_pool[10],
-        appeals=[],
-        staking_distribution="constant",
-    )

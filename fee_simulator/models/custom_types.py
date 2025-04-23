@@ -151,7 +151,7 @@ class TransactionBudget(BaseModel):
 
     leaderTimeout: int = Field(ge=0)
     validatorsTimeout: int = Field(ge=0)
-    appealRounds: int = Field(ge=1)
+    appealRounds: int = Field(ge=0)
     rotations: List[int]
     senderAddress: str
     appeals: Optional[List[Appeal]] = []
@@ -167,7 +167,7 @@ class TransactionBudget(BaseModel):
 
     @model_validator(mode="after")
     def validate_rotations(self):
-        if len(self.rotations) != self.appealRounds:
+        if len(self.rotations) != self.appealRounds + 1:
             raise ValueError("Number of rotations must match appealRounds")
         return self
 
