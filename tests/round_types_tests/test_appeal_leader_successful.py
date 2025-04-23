@@ -1,8 +1,3 @@
-# normal round -- undetermined
-# appeal successful
-# normal round
-
-# appealant gana su bond + leader_timeout
 import pytest
 from fee_simulator.models.custom_types import (
     TransactionRoundResults,
@@ -135,3 +130,9 @@ def test_appeal_leader_successful(verbose):
         compute_total_fees(result.fees[addresses_pool[i]]) == -validatorsTimeout
         for i in [7, 8, 9, 10, 11]
     ), "Loser Validator should have no fees"
+
+    # Sender Fees Assert
+    assert (
+        compute_total_fees(result.fees[default_budget.senderAddress])
+        == -2 * leaderTimeout - validatorsTimeout
+    ), "Sender should have negative fees equal to the two times leaderTimeout (one leader, and one bonus for appealant) and one validatorsTimeout as the rest cancel out"
