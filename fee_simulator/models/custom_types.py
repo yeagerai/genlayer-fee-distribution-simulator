@@ -13,7 +13,7 @@ from typing import Dict, List, Literal, Union, Optional
 ETH_ADDRESS_REGEX = r"^0x[a-fA-F0-9]{40}$"
 
 # Define vote types
-VoteType = Literal["Agree", "Disagree", "Timeout", "Idle"]
+VoteType = Literal["Agree", "Disagree", "Timeout", "Idle", "NA"]
 LeaderAction = Literal["LeaderReceipt", "LeaderTimeout"]
 VoteValue = Union[
     VoteType,  # e.g., "Agree", "Disagree", "Timeout", "Idle"

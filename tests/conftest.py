@@ -1,6 +1,4 @@
 import pytest
-from fee_simulator.models.custom_types import TransactionBudget
-from fee_simulator.models.constants import addresses_pool
 
 
 def pytest_addoption(parser):

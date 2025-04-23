@@ -80,7 +80,14 @@ def _build_vote_table(votes: dict, is_reserve: bool = False) -> list:
 
 def _build_vote_summary(votes: dict) -> tuple[list, dict]:
     """Build vote summary table and counts."""
-    vote_counts = {"Agree": 0, "Disagree": 0, "Timeout": 0, "Idle": 0, "Leader": 0}
+    vote_counts = {
+        "Agree": 0,
+        "Disagree": 0,
+        "Timeout": 0,
+        "Idle": 0,
+        "Leader": 0,
+        "NA": 0,
+    }
     for vote in votes.values():
         is_leader = isinstance(vote, list) and vote[0] in [
             "LeaderReceipt",

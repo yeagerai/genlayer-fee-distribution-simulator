@@ -119,9 +119,9 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
                 and compute_majority(reverse_rounds[i + 2]) == "UNDETERMINED"
             ):
                 if "unsuccessful" in reverse_labels[i + 1]:
-                    reverse_labels[i] = "split_previous_appeal_bond"
+                    reverse_labels[i + 2] = "split_previous_appeal_bond"
                 else:
-                    reverse_labels[i + 2] = "validators_penalty_only_round"
+                    reverse_labels[i + 2] = "skip_round"
 
             if (
                 i < len(labels)

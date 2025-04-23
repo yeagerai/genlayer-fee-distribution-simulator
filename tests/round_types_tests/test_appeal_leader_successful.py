@@ -52,24 +52,17 @@ def test_appeal_leader_successful(verbose):
     )
     # Second round (appeal): 7 validators, majority Agree
     rotation2 = Rotation(
-        votes={
-            addresses_pool[5]: ["LeaderReceipt", "Agree"],
-            addresses_pool[6]: "Agree",
-            addresses_pool[7]: "Agree",
-            addresses_pool[8]: "Agree",
-            addresses_pool[9]: "Disagree",
-            addresses_pool[10]: "Disagree",
-            addresses_pool[11]: "Timeout",
-        }
+        votes={addresses_pool[i]: "NA" for i in [5, 6, 7, 8, 9, 10, 11]}
     )
+
     # Third round: 11 validators, majority Agree
     rotation3 = Rotation(
         votes={
-            addresses_pool[1]: ["LeaderReceipt", "Agree"],
+            addresses_pool[5]: ["LeaderReceipt", "Agree"],
             addresses_pool[2]: "Agree",
             addresses_pool[3]: "Agree",
             addresses_pool[4]: "Agree",
-            addresses_pool[5]: "Agree",
+            addresses_pool[1]: "Agree",
             addresses_pool[6]: "Agree",
             addresses_pool[7]: "Disagree",
             addresses_pool[8]: "Disagree",
@@ -103,10 +96,10 @@ def test_appeal_leader_successful(verbose):
 
     # Round Label Assert
     assert round_labels == [
-        "validators_penalty_only_round",
+        "skip_round",
         "appeal_leader_successful",
         "normal_round",
-    ], f"Expected ['validators_penalty_only_round', 'appeal_leader_successful', 'normal_round'], got {round_labels}"
+    ], f"Expected ['skip_round', 'appeal_leader_successful', 'normal_round'], got {round_labels}"
 
     # Everyone Else 0 Fees Assert
     assert all(
@@ -118,4 +111,27 @@ def test_appeal_leader_successful(verbose):
     # Appealant Fees Assert
     assert (
         compute_total_fees(result.fees[addresses_pool[23]]) == leaderTimeout
-    ), "Appealant should have fees equal to the leaderTimeout"
+    ), "Appealant should have fees equal to the leaderTimeout as the appeal was successful"
+
+    # 1st Leader Fees Assert
+    assert (
+        compute_total_fees(result.fees[addresses_pool[0]]) == 0
+    ), "1st Leader should have fees equal to the leaderTimeout"
+
+    # 2nd Leader Fees Assert
+    assert (
+        compute_total_fees(result.fees[addresses_pool[5]])
+        == leaderTimeout + validatorsTimeout
+    ), "2nd Leader should have fees equal to the leaderTimeout"
+
+    # Winner Validator Fees Assert
+    assert all(
+        compute_total_fees(result.fees[addresses_pool[i]]) == validatorsTimeout
+        for i in [2, 3, 4, 6]
+    ), "Winner Validator should have fees equal to the validatorsTimeout"
+
+    # Loser Validator Fees Assert
+    assert all(
+        compute_total_fees(result.fees[addresses_pool[i]]) == -validatorsTimeout
+        for i in [7, 8, 9, 10, 11]
+    ), "Loser Validator should have no fees"
