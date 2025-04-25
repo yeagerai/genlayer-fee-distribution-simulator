@@ -119,7 +119,7 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
                 and compute_majority(reverse_rounds[i + 2]) == "UNDETERMINED"
             ):
                 if "unsuccessful" in reverse_labels[i + 1]:
-                    reverse_labels[i + 2] = "split_previous_appeal_bond"
+                    reverse_labels[i] = "split_previous_appeal_bond"
                 else:
                     reverse_labels[i + 2] = "skip_round"
 
@@ -298,20 +298,8 @@ def distribute_round(
                 ].appealant_node += transaction_budget.leaderTimeout
 
     elif label == "appeal_leader_unsuccessful":
-        sender_address = transaction_budget.senderAddress
-
-        # Ensure round_index is valid for appeals
-        if transaction_budget.appeals and round_index <= len(
-            transaction_budget.appeals
-        ):
-            appeal = transaction_budget.appeals[floor(round_index / 2)]
-            appealant_address = appeal.appealantAddress
-
-            if sender_address in fee_distribution.fees:
-                fee_distribution.fees[sender_address].sender_node += appeal_bond
-
-            if appealant_address in fee_distribution.fees:
-                fee_distribution.fees[appealant_address].appealant_node -= appeal_bond
+        """Appealant bond is subtracted at the beginning of the process, and sender
+        gets refunded at the end of the process"""
 
     elif label == "appeal_validator_successful":
         # Ensure round_index is valid for appeals
@@ -402,27 +390,36 @@ def distribute_round(
             and round_index > 0
             and round_index - 1 <= len(transaction_budget.appeals)
         ):
-            appeal_bond = transaction_budget.appeals[
-                floor(round_index / 2) - 1
-            ].appealBond
+            appeal_bond = compute_appeal_bond_partial(
+                normal_round_index=round_index,
+                leader_timeout=transaction_budget.leaderTimeout,
+                validators_timeout=transaction_budget.validatorsTimeout,
+            )
+            if majority == "UNDETERMINED":
+                for addr in votes.keys():
+                    if addr in fee_distribution.fees:
+                        fee_distribution.fees[addr].validator_node += appeal_bond / len(
+                            votes.keys()
+                        )
 
-            # Distribute to majority validators
-            for addr in majority_addresses:
-                if addr in fee_distribution.fees and majority_addresses:
-                    fee_distribution.fees[
-                        addr
-                    ].validator_node += transaction_budget.validatorsTimeout
-                    fee_distribution.fees[addr].validator_node += appeal_bond / len(
-                        majority_addresses
-                    )
+            else:
+                # Distribute to majority validators
+                for addr in majority_addresses:
+                    if addr in fee_distribution.fees and majority_addresses:
+                        fee_distribution.fees[
+                            addr
+                        ].validator_node += transaction_budget.validatorsTimeout
+                        fee_distribution.fees[addr].validator_node += appeal_bond / len(
+                            majority_addresses
+                        )
 
-            # Add penalty for minority validators
-            for addr in minority_addresses:
-                if addr in fee_distribution.fees:
-                    fee_distribution.fees[addr].validator_node -= (
-                        penalty_reward_coefficient
-                        * transaction_budget.validatorsTimeout
-                    )
+                # Add penalty for minority validators
+                for addr in minority_addresses:
+                    if addr in fee_distribution.fees:
+                        fee_distribution.fees[addr].validator_node -= (
+                            penalty_reward_coefficient
+                            * transaction_budget.validatorsTimeout
+                        )
 
             first_addr = next(iter(votes.keys()), None)
             if first_addr and first_addr in fee_distribution.fees:
@@ -676,13 +673,12 @@ def distribute_fees(
             # Subtract appeal bond from appealant address
             if i % 2 == 1:
                 appealant_address = transaction_budget.appeals[i // 2].appealantAddress
-                fee_distribution.fees[
-                    appealant_address
-                ].appealant_node -= compute_appeal_bond_partial(
+                bond = compute_appeal_bond_partial(
                     normal_round_index=i - 1,
                     leader_timeout=transaction_budget.leaderTimeout,
                     validators_timeout=transaction_budget.validatorsTimeout,
                 )
+                fee_distribution.fees[appealant_address].appealant_node -= bond
 
             fee_distribution = distribute_round(
                 round=round_obj,
@@ -710,5 +706,11 @@ def distribute_fees(
     refund = compute_total_cost(transaction_budget) + have_to_pay
     if refund > 0:
         fee_distribution.fees[transaction_budget.senderAddress].sender_node += refund
+
+        if fee_distribution.fees[transaction_budget.senderAddress].sender_node > 0:
+            tokens_to_burn = fee_distribution.fees[
+                transaction_budget.senderAddress
+            ].sender_node
+            fee_distribution.fees[transaction_budget.senderAddress].sender_node = 0
 
     return fee_distribution, labels
