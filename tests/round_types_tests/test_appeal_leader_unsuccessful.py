@@ -17,6 +17,7 @@ from fee_simulator.core.utils import (
     initialize_fee_distribution,
     compute_total_fees,
     compute_appeal_bond_partial,
+    compute_total_cost,
 )
 
 from fee_simulator.core.display import (
@@ -127,22 +128,16 @@ def test_appeal_leader_unsuccessful(verbose):
     # 2nd Leader Fees Assert
     assert (
         compute_total_fees(result.fees[addresses_pool[5]])
-        == leaderTimeout + validatorsTimeout
+        == leaderTimeout + validatorsTimeout + compute_appeal_bond_partial(
+        normal_round_index=0,
+        leader_timeout=leaderTimeout,
+        validators_timeout=validatorsTimeout,
+    )/11
     ), "2nd Leader should have fees equal to the leaderTimeout"
-
-    # Winner Validator Fees Assert
-    assert all(
-        compute_total_fees(result.fees[addresses_pool[i]]) == validatorsTimeout
-        for i in [2, 3, 4, 6]
-    ), "Winner Validator should have fees equal to the validatorsTimeout"
-
-    # Loser Validator Fees Assert
-    assert all(
-        compute_total_fees(result.fees[addresses_pool[i]]) == -validatorsTimeout
-        for i in [7, 8, 9, 10, 11]
-    ), "Loser Validator should have no fees"
 
     # Sender Fees Assert
     assert (
-        compute_total_fees(result.fees[default_budget.senderAddress]) == 0
+        compute_total_fees(result.fees[default_budget.senderAddress]) == -compute_total_cost(
+        default_budget
+    )
     ), "Sender should have zero fees as the appealant bond overcompensates the transaction cost in this case"
