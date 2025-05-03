@@ -133,3 +133,5 @@ def test_appeal_validator_unsuccessful(verbose):
         compute_total_fees(result.fees[default_budget.senderAddress])
         == 0 # TODO: bug with refunds, in this case sender and appealant pay more than they should preventively, but refunds are not computed correctly
     ), "Sender should have negative fees equal to the two times leaderTimeout (one leader, and one bonus for appealant) and one validatorsTimeout as the rest cancel out"
+
+# TODO: more in general, is there a general rule for the refunds? or every label has its own rule?

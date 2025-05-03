@@ -1,4 +1,4 @@
-# normal round
+# skip round
 # appeal successful TODO: this changes majorities so rewards of previous round should be reasigned based on new majority?
 # normal round
 

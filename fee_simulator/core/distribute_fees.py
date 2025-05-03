@@ -51,7 +51,11 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
 
     labels = ["normal_round"]
 
-    if len(rounds) == 1:
+    if len(rounds) == 1: # TODO: this is a hack to handle the case where there is only one rotation in the first round, but we need to handle rotations properly
+        leader_address = next(iter(rounds[0].keys()))
+        print(leader_address)
+        if rounds[0][leader_address] == ["LeaderTimeout","NA"]:
+            labels = ["leader_timeout_50_percent"]
         return labels
 
     for i, round in enumerate(rounds):
@@ -100,7 +104,7 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
                 else:
                     labels.append("appeal_validator_unsuccessful")
         else:
-            if len(round) == 1:
+            if "LeaderTimeout" in round:
                 labels.append("leader_timeout")
             else:
                 labels.append("normal_round")

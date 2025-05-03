@@ -6,3 +6,4 @@
 # nadie mas cobra ni paga nada
 
 ## TODO: el distribute_fees no esta bien porque es 50% del bond y no del timeout
+["leader_timeout_50_percent", "appeal_leader_timeout_unsuccessful", "leader_timeout_50_prev_appeal_bond"]
