@@ -4,16 +4,4 @@
 # val3 hash2 -- 0%
 # val4 hash1 -- 1%
 
-# normal round -- UNDETERMINED
-
-
-## PETA
-# with tribunal appeal full scale
-# leader gana -> 0%
-# val1 pierde -> 1%
-# val2 pierde -> 1%
-# val3 pierde -> 1%
-# val4 gana -> 0%
-
-
-# anula los fees de la ultima ronda y no hay mas rondas
+# TODO: anula los fees del ultimo set de rondas y no hay mas rondas

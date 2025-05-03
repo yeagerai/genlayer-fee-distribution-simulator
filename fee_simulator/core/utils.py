@@ -57,7 +57,7 @@ def compute_appeal_bond(
     """
     Compute appeal bond for a specific normal round's appeal.
     """
-    safety_coefficient = 1.2
+    safety_coefficient = 1
 
     if (
         normal_round_index % 2 != 0
@@ -78,17 +78,12 @@ def compute_appeal_bond(
         else 0
     )
 
-    base_penalty = penalty_reward_coefficient * validators_timeout
     appeal_cost = appeal_size * validators_timeout
     next_cost = next_normal_size * validators_timeout
 
     total_cost = appeal_cost + next_cost + leader_timeout
 
-    minority_size = normal_size // 2
-    penalty_offset = minority_size * base_penalty
-
-    appeal_bond = ceil((total_cost - penalty_offset) * safety_coefficient)
-    return max(appeal_bond, 0)
+    return max(total_cost, 0)
 
 
 # Partial function with fixed round_sizes and penalty_reward_coefficient

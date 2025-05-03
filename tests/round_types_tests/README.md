@@ -1,7 +1,7 @@
-To run a specific test, looking at the print statements in the test file:
+To run a specific test, looking at the print statements (fancy tables) in the test file:
 
 ```bash
-pytest tests/round_types_tests/test_normal_round.py -s --verbose-output
+pytest tests/folder/test_file.py -s --verbose-output
 ```
 
 To run all tests, use the following command:
