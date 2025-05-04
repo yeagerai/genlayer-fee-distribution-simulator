@@ -11,17 +11,16 @@ from fee_simulator.types import (
 )
 
 from fee_simulator.utils import (
-    compute_appeal_bond_partial,
     compute_total_cost,
-    compute_total_fees,
     initialize_constant_stakes,
 )
 
+from fee_simulator.core.bond_computing import compute_appeal_bond
 from fee_simulator.core.round_labeling import label_rounds
 from fee_simulator.core.idleness import replace_idle_participants
 from fee_simulator.core.deterministic_violation import handle_deterministic_violations
 from fee_simulator.core.round_fee_distribution import distribute_round
-
+from fee_simulator.core.refunds import compute_sender_refund
 
 def process_transaction(
     addresses: List[str],
@@ -68,51 +67,33 @@ def process_transaction(
             # Subtract appeal bond from appealant address
             if i % 2 == 1:
                 appealant_address = transaction_budget.appeals[i // 2].appealantAddress
-                bond = compute_appeal_bond_partial(
+                bond = compute_appeal_bond(
                     normal_round_index=i - 1,
                     leader_timeout=transaction_budget.leaderTimeout,
                     validators_timeout=transaction_budget.validatorsTimeout,
                 )
-                fee_distribution.fees[appealant_address].appealant_node -= bond
+                fee_events.append(FeeEvent(
+                    sequence_id=last_event_index,
+                    address=appealant_address,
+                    cost=bond,
+                ))
+                last_event_index += 1
 
-            fee_distribution = distribute_round(
+            round_fee_events = distribute_round(
                 round=round_obj,
                 round_index=i,
                 label=labels[i],
                 transaction_budget=transaction_budget,
-                fee_distribution=fee_distribution,
             )
+            fee_events.extend(round_fee_events)
+            last_event_index = len(fee_events)
 
-    # Refund sender negative fees if necessary
-    # TODO: toppers (users that top up the transaction) should be refunded proportionally to their spending
-    print(fee_distribution.fees[sender_address].sender_node)
-    positive_fees = {
-        addr: compute_total_fees(fee)
-        for addr, fee in fee_distribution.fees.items()
-        if compute_total_fees(fee) > 0
-    }
-    appealant_addresses = [
-        transaction_budget.appeals[i // 2].appealantAddress
-        for i in range(len(transaction_budget.appeals) * 2)
-    ]
-    negative_fees_but_sender = {
-        addr: compute_total_fees(fee)
-        for addr, fee in fee_distribution.fees.items()
-        if compute_total_fees(fee) < 0 and addr != transaction_budget.senderAddress and addr not in appealant_addresses
-    }
-    print(negative_fees_but_sender)
-    have_to_pay = -1 * (
-        sum(negative_fees_but_sender.values()) + sum(positive_fees.values())
-    )
-    print(sum(negative_fees_but_sender.values()), have_to_pay, sum(positive_fees.values()))
-    refund = compute_total_cost(transaction_budget) + have_to_pay
-    if refund > 0:
-        fee_distribution.fees[transaction_budget.senderAddress].sender_node += refund
+    refunds = compute_sender_refund(sender_address, fee_events)
+    fee_events.append(FeeEvent(
+        sequence_id=last_event_index,
+        address=sender_address,
+        earned=refunds,
+    ))
+    last_event_index += 1
 
-        if fee_distribution.fees[transaction_budget.senderAddress].sender_node > 0:
-            tokens_to_burn = fee_distribution.fees[
-                transaction_budget.senderAddress
-            ].sender_node
-            fee_distribution.fees[transaction_budget.senderAddress].sender_node = 0
-
-    return fee_distribution, labels
+    return fee_events, labels

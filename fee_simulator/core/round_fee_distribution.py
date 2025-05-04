@@ -1,3 +1,6 @@
+
+from typing import List
+
 from fee_simulator.models import (
     Round,
     TransactionBudget,
@@ -22,8 +25,7 @@ def distribute_round(
     round_index: int,
     label: RoundLabel,
     transaction_budget: TransactionBudget,
-    fee_distribution: FeeDistribution,
-) -> FeeDistribution:
+) -> List[FeeEvent]:
     """
     Distribute fees for a single round based on its label.
 
