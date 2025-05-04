@@ -5,6 +5,20 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict, model_valida
 from fee_simulator.constants import ETH_ADDRESS_REGEX
 from fee_simulator.types import RoundLabel, Vote, Role
 
+class EventSequence:
+    """
+    Manages an auto-incrementing sequence counter for FeeEvent IDs.
+    """
+    def __init__(self):
+        self._counter = 1
+
+    def set_counter(self, counter: int):
+        self._counter = counter
+
+    def next_id(self) -> int:
+        current = self._counter
+        self._counter += 1
+        return current
 
 class Appeal(BaseModel):
     model_config = ConfigDict(frozen=True)

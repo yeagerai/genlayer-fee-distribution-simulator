@@ -4,6 +4,7 @@ from fee_simulator.models import (
     TransactionBudget,
     TransactionRoundResults,
     FeeEvent,
+    EventSequence,
 )
 
 from fee_simulator.types import (
@@ -19,7 +20,7 @@ from fee_simulator.core.bond_computing import compute_appeal_bond
 from fee_simulator.core.round_labeling import label_rounds
 from fee_simulator.core.idleness import replace_idle_participants
 from fee_simulator.core.deterministic_violation import handle_deterministic_violations
-from fee_simulator.core.round_fee_distribution import distribute_round
+from fee_simulator.core.round_fee_distribution.distribute_round import distribute_round
 from fee_simulator.core.refunds import compute_sender_refund
 
 def process_transaction(
@@ -28,20 +29,19 @@ def process_transaction(
     transaction_budget: TransactionBudget,
 ) -> tuple[List[FeeEvent], List[RoundLabel]]:
 
-    fee_events = []
-    last_event_index = 0
+    event_sequence = EventSequence() # singleton
+    fee_events = [] # list of immutable objects that can be audited
+
+    # Initialize stakes
+    fee_events.extend(initialize_constant_stakes(event_sequence, addresses))
 
     # Subtract total cost from sender address
     sender_address = transaction_budget.senderAddress
     fee_events.append(FeeEvent(
-        sequence_id=last_event_index,
+        sequence_id=event_sequence.next_id(),
         address=sender_address,
         cost=compute_total_cost(transaction_budget),
     ))
-    last_event_index += 1
-    # Initialize stakes
-    fee_events.extend(initialize_constant_stakes(last_event_index, addresses))
-    last_event_index = len(fee_events)
 
     # Replace idle validators and slash them
     replace_idle_transaction_results, replace_idle_fee_events = replace_idle_participants(
@@ -49,13 +49,12 @@ def process_transaction(
         transaction_results=transaction_results,
     )
     fee_events = replace_idle_fee_events
-    last_event_index = len(fee_events)
+    event_sequence.set_counter(len(fee_events))# TODO: this is a hack, should be properly integrated into replace_idle_participants
 
     # Handle deterministic violations (hash mismatches)
     fee_events.extend(handle_deterministic_violations(
-        replace_idle_transaction_results, last_event_index
+        replace_idle_transaction_results, event_sequence
     ))
-    last_event_index = len(fee_events)
 
     # Get labels for all rounds
     labels = label_rounds(replace_idle_transaction_results)
@@ -73,27 +72,25 @@ def process_transaction(
                     validators_timeout=transaction_budget.validatorsTimeout,
                 )
                 fee_events.append(FeeEvent(
-                    sequence_id=last_event_index,
+                    sequence_id=event_sequence.next_id(),
                     address=appealant_address,
                     cost=bond,
                 ))
-                last_event_index += 1
 
             round_fee_events = distribute_round(
                 round=round_obj,
                 round_index=i,
                 label=labels[i],
                 transaction_budget=transaction_budget,
+                event_sequence=event_sequence,
             )
             fee_events.extend(round_fee_events)
-            last_event_index = len(fee_events)
 
     refunds = compute_sender_refund(sender_address, fee_events)
     fee_events.append(FeeEvent(
-        sequence_id=last_event_index,
+        sequence_id=event_sequence.next_id(),
         address=sender_address,
         earned=refunds,
     ))
-    last_event_index += 1
 
     return fee_events, labels
