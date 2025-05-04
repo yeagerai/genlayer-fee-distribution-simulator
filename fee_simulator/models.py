@@ -1,55 +1,13 @@
 import re
-from pydantic import (
-    BaseModel,
-    Field,
-    validator,
-    field_validator,
-    ConfigDict,
-    model_validator,
-)
-from typing import Dict, List, Literal, Union, Optional
+from typing import Dict, List, Literal, Optional
+from pydantic import BaseModel, Field, field_validator, ConfigDict, model_validator
 
-# Ethereum address regex pattern
-ETH_ADDRESS_REGEX = r"^0x[a-fA-F0-9]{40}$"
-
-# Define vote types
-VoteType = Literal["Agree", "Disagree", "Timeout", "Idle", "NA"]
-LeaderAction = Literal["LeaderReceipt", "LeaderTimeout"]
-VoteValue = Union[
-    VoteType,  # e.g., "Agree", "Disagree", "Timeout", "Idle"
-    List[Union[LeaderAction, VoteType]],  # e.g., ["LeaderReceipt", "Agree"]
-    List[
-        Union[LeaderAction, VoteType, str]
-    ],  # e.g., ["LeaderReceipt", "Agree", "0x123"]
-    List[Union[VoteType, str]],  # e.g., ["Disagree", "0x123"]
-]
-
-# Define round outcome types
-MajorityOutcome = Literal["AGREE", "DISAGREE", "TIMEOUT", "UNDETERMINED"]
-RoundLabel = Literal[
-    "normal_round",
-    "empty_round",
-    "appeal_leader_timeout_unsuccessful",
-    "appeal_leader_timeout_successful",
-    "appeal_leader_successful",
-    "appeal_leader_unsuccessful",
-    "appeal_validator_successful",
-    "appeal_validator_unsuccessful",
-    "leader_timeout",
-    "validators_penalty_only_round",
-    "skip_round",
-    "leader_timeout_50_percent",
-    "split_previous_appeal_bond",
-    "leader_timeout_50_previous_appeal_bond",
-    "leader_timeout_150_previous_normal_round",
-]
+from fee_simulator.constants import ETH_ADDRESS_REGEX
+from fee_simulator.types import RoundLabel, Vote, Role
 
 
 class Appeal(BaseModel):
-    """
-    Model for an appeal within a transaction.
-    """
-
+    model_config = ConfigDict(frozen=True)
     appealantAddress: str
 
     @field_validator("appealantAddress")
@@ -60,12 +18,9 @@ class Appeal(BaseModel):
 
 
 class Rotation(BaseModel):
-    """
-    A rotation is a collection of votes from different addresses.
-    """
-
-    votes: Dict[str, VoteValue]
-    reserve_votes: Dict[str, VoteValue] = {}
+    model_config = ConfigDict(frozen=True)
+    votes: Dict[str, Vote]
+    reserve_votes: Dict[str, Vote] = {}
 
     @field_validator("votes")
     def validate_vote_addresses(cls, v):
@@ -96,59 +51,31 @@ class Rotation(BaseModel):
                         )
         return v
 
-
 class Round(BaseModel):
-    """
-    A round consists of one or more rotations.
-    """
-
+    model_config = ConfigDict(frozen=True)
     rotations: List[Rotation]
 
-
 class TransactionRoundResults(BaseModel):
-    """
-    All rounds in a transaction.
-    """
-
+    model_config = ConfigDict(frozen=True)
     rounds: List[Round]
 
-
-class FeeEntry(BaseModel):
-    """
-    Fee entry for an address, containing fees for different roles.
-    """
-
-    leader_node: int = Field(default=0, ge=0)
-    validator_node: int = Field(default=0, ge=0)
-    sender_node: int = Field(default=0, ge=0)
-    appealant_node: int = Field(default=0, ge=0)
-    stake: float = Field(default=0, ge=0)
-
-
-class FeeDistribution(BaseModel):
-    """
-    Distribution of fees across addresses.
-    """
-
-    fees: Dict[str, FeeEntry] = {}
-
-    @field_validator("fees")
-    def validate_fee_addresses(cls, v):
-        for addr in v.keys():
-            if not re.match(ETH_ADDRESS_REGEX, addr):
-                raise ValueError(
-                    f"Invalid Ethereum address in fee distribution: {addr}"
-                )
-        return v
-
+class FeeEvent(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    sequence_id: int
+    address: str
+    round_index: int
+    round_label: RoundLabel
+    role: Role
+    vote: Vote
+    hash: str
+    cost: int = Field(default=0, ge=0)
+    staked: int = Field(default=0, ge=0)
+    earned: int = Field(default=0, ge=0)
+    slashed: int = Field(default=0, ge=0)
+    burned: int = Field(default=0, ge=0) # penalty
 
 class TransactionBudget(BaseModel):
-    """
-    Budget and parameters for a transaction.
-    """
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
+    model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)
     leaderTimeout: int = Field(ge=0)
     validatorsTimeout: int = Field(ge=0)
     appealRounds: int = Field(ge=0)
@@ -185,3 +112,33 @@ class TransactionBudget(BaseModel):
                 "staking_mean and staking_variance should not be provided for constant distribution"
             )
         return self
+
+# class FeeEntry(BaseModel):
+#     """
+#     OLD
+#     """
+
+#     model_config = ConfigDict(frozen=True)
+#     leader_node: int = Field(default=0, ge=0)
+#     validator_node: int = Field(default=0, ge=0)
+#     sender_node: int = Field(default=0, ge=0)
+#     appealant_node: int = Field(default=0, ge=0)
+#     stake: float = Field(default=0, ge=0)
+
+
+# class FeeDistribution(BaseModel):
+#     """
+#     OLD
+#     """
+#     model_config = ConfigDict(frozen=True)
+
+#     fees: Dict[str, FeeEntry] = {}
+
+#     @field_validator("fees")
+#     def validate_fee_addresses(cls, v):
+#         for addr in v.keys():
+#             if not re.match(ETH_ADDRESS_REGEX, addr):
+#                 raise ValueError(
+#                     f"Invalid Ethereum address in fee distribution: {addr}"
+#                 )
+#         return v

@@ -1,10 +1,10 @@
-from typing import Dict, List, Any, Tuple, Union, Optional
-from fee_simulator.models.custom_types import VoteType, VoteValue, MajorityOutcome
+from typing import Dict, List, Tuple, Optional
+from fee_simulator.types import Vote, MajorityOutcome
 from collections import Counter
-from fee_simulator.models.constants import DEFAULT_HASH
+from fee_simulator.constants import DEFAULT_HASH
 
 
-def normalize_vote(vote_value: VoteValue) -> VoteType:
+def normalize_vote(vote_value: Vote) -> Vote:
     """
     Convert any vote value to a standard VoteType for comparison.
 
@@ -24,7 +24,7 @@ def normalize_vote(vote_value: VoteValue) -> VoteType:
     return vote_value
 
 
-def extract_hash(vote_value: VoteValue) -> str:
+def extract_hash(vote_value: Vote) -> str:
     """
     Extract hash from a vote value if present.
 
@@ -45,7 +45,7 @@ def extract_hash(vote_value: VoteValue) -> str:
         return vote_value[1]
 
 
-def compute_majority(rotation: Dict[str, VoteValue]) -> str:
+def compute_majority(rotation: Dict[str, Vote]) -> MajorityOutcome:
     """
     Compute the majority vote type.
 
@@ -79,7 +79,7 @@ def compute_majority(rotation: Dict[str, VoteValue]) -> str:
         return "UNDETERMINED"
 
 
-def compute_majority_hash(rotation: Dict[str, VoteValue]) -> Optional[str]:
+def compute_majority_hash(rotation: Dict[str, Vote]) -> Optional[str]:
     """
     Compute the majority hash, regardless of vote type.
 
@@ -118,7 +118,7 @@ def compute_majority_hash(rotation: Dict[str, VoteValue]) -> Optional[str]:
 
 
 def who_is_in_vote_majority(
-    rotation: Dict[str, VoteValue], majority_vote: str
+    rotation: Dict[str, Vote], majority_vote: MajorityOutcome
 ) -> Tuple[List[str], List[str]]:
     """
     Determine which addresses voted for the majority vote type.
@@ -140,7 +140,7 @@ def who_is_in_vote_majority(
 
 
 def who_is_in_hash_majority(
-    rotation: Dict[str, VoteValue], majority_hash: str
+    rotation: Dict[str, Vote], majority_hash: str
 ) -> Tuple[List[str], List[str]]:
     """
     Determine which addresses provided the majority hash.

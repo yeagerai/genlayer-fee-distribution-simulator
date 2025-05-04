@@ -1,8 +1,8 @@
 import logging
 from typing import List, Optional
 from tabulate import tabulate
-from fee_simulator.models.custom_types import TransactionRoundResults, FeeDistribution
-from fee_simulator.models.constants import DEFAULT_STAKE
+from fee_simulator.models import TransactionRoundResults, FeeDistribution
+from fee_simulator.constants import DEFAULT_STAKE
 
 
 # Terminal colors

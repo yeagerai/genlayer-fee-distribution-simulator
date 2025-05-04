@@ -1,0 +1,30 @@
+from typing import List, Literal, Union
+
+ValVote = Literal["AGREE", "DISAGREE", "TIMEOUT", "IDLE", "NA"]
+LeaderAction = Literal["LEADER_RECEIPT", "LEADER_TIMEOUT"]
+Vote = Union[
+    ValVote,
+    List[Union[LeaderAction, ValVote]],
+    List[Union[LeaderAction, ValVote, str]],
+    List[Union[ValVote, str]],
+]
+Role = Literal["LEADER", "VALIDATOR", "SENDER", "APPEALANT", "TOPPER"]
+
+MajorityOutcome = Literal["AGREE", "DISAGREE", "TIMEOUT", "UNDETERMINED"]
+RoundLabel = Literal[
+    "NORMAL_ROUND",
+    "EMPTY_ROUND",
+    "APPEAL_LEADER_TIMEOUT_UNSUCCESSFUL",
+    "APPEAL_LEADER_TIMEOUT_SUCCESSFUL",
+    "APPEAL_LEADER_SUCCESSFUL",
+    "APPEAL_LEADER_UNSUCCESSFUL",
+    "APPEAL_VALIDATOR_SUCCESSFUL",
+    "APPEAL_VALIDATOR_UNSUCCESSFUL",
+    "LEADER_TIMEOUT",
+    "VALIDATORS_PENALTY_ONLY_ROUND",
+    "SKIP_ROUND",
+    "LEADER_TIMEOUT_50_PERCENT",
+    "SPLIT_PREVIOUS_APPEAL_BOND",
+    "LEADER_TIMEOUT_50_PREVIOUS_APPEAL_BOND",
+    "LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND",
+]
