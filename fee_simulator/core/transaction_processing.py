@@ -73,6 +73,8 @@ def process_transaction(
                 )
                 fee_events.append(FeeEvent(
                     sequence_id=event_sequence.next_id(),
+                    round_index=i,
+                    round_label=labels[i],
                     address=appealant_address,
                     cost=bond,
                 ))

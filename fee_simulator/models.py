@@ -126,33 +126,3 @@ class TransactionBudget(BaseModel):
                 "staking_mean and staking_variance should not be provided for constant distribution"
             )
         return self
-
-# class FeeEntry(BaseModel):
-#     """
-#     OLD
-#     """
-
-#     model_config = ConfigDict(frozen=True)
-#     leader_node: int = Field(default=0, ge=0)
-#     validator_node: int = Field(default=0, ge=0)
-#     sender_node: int = Field(default=0, ge=0)
-#     appealant_node: int = Field(default=0, ge=0)
-#     stake: float = Field(default=0, ge=0)
-
-
-# class FeeDistribution(BaseModel):
-#     """
-#     OLD
-#     """
-#     model_config = ConfigDict(frozen=True)
-
-#     fees: Dict[str, FeeEntry] = {}
-
-#     @field_validator("fees")
-#     def validate_fee_addresses(cls, v):
-#         for addr in v.keys():
-#             if not re.match(ETH_ADDRESS_REGEX, addr):
-#                 raise ValueError(
-#                     f"Invalid Ethereum address in fee distribution: {addr}"
-#                 )
-#         return v

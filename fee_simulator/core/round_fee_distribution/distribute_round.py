@@ -52,16 +52,6 @@ def distribute_round(
 ) -> List[FeeEvent]:
     """
     Distribute fees for a single round based on its label, generating FeeEvent instances.
-
-    Args:
-        round: Round data with rotations
-        round_index: Index of the round
-        label: Round label
-        budget: Transaction budget parameters
-        event_sequence: Sequence counter for event IDs
-
-    Returns:
-        List of FeeEvent instances
     """
     transformer = FEE_RULES.get(label, lambda r, i, b, s: [])
     return transformer(round, round_index, budget, event_sequence)
