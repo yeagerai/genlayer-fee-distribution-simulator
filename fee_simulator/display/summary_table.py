@@ -1,7 +1,7 @@
 import logging
 from typing import List, Optional
 from tabulate import tabulate
-from fee_simulator.models import TransactionRoundResults, FeeDistribution
+from fee_simulator.models import TransactionRoundResults, FeeEvent, TransactionBudget, RoundLabel
 from fee_simulator.constants import DEFAULT_STAKE
 
 
@@ -412,3 +412,6 @@ def pretty_print_fee_distribution(
     )
 
     print(tabulate(table_data, headers=headers, tablefmt="fancy_grid"))
+
+def display_summary_table(fee_events: List[FeeEvent], transaction_results: TransactionRoundResults, transaction_budget: TransactionBudget, round_labels: List[RoundLabel]):
+    pass
