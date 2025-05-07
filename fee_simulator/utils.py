@@ -5,6 +5,7 @@ from typing import List
 from fee_simulator.models import (
     FeeEvent,
     TransactionBudget,
+    EventSequence,
 )
 from fee_simulator.constants import (
     ROUND_SIZES,
@@ -18,18 +19,16 @@ def generate_random_eth_address() -> str:
 
 
 def initialize_constant_stakes(
-    last_event_index: int,
+    event_sequence: EventSequence,
     addresses: List[str]
 ) -> List[FeeEvent]:
-    new_event_index = last_event_index
     events = []
     for addr in addresses:
         events.append(FeeEvent(
-            sequence_id=new_event_index,
+            sequence_id=event_sequence.next_id(),
             address=addr,
             staked=DEFAULT_STAKE,
         ))
-        new_event_index += 1
     return events
 
 

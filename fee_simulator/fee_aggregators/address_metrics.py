@@ -45,3 +45,8 @@ def compute_all_zeros(fee_events: List[FeeEvent], address: str) -> bool:
         and compute_total_burnt(fee_events, address) == 0
         and compute_total_slashed(fee_events, address) == 0
     )
+
+def compute_total_balance(fee_events: List[FeeEvent], address: str) -> float:
+    return (
+        compute_total_earnings(fee_events, address) - compute_total_costs(fee_events, address)
+    )

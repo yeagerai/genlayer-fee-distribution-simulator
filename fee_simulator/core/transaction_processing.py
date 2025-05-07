@@ -45,11 +45,11 @@ def process_transaction(
 
     # Replace idle validators and slash them
     replace_idle_transaction_results, replace_idle_fee_events = replace_idle_participants(
+        event_sequence=event_sequence,
         fee_events=fee_events,
         transaction_results=transaction_results,
     )
     fee_events = replace_idle_fee_events
-    event_sequence.set_counter(len(fee_events))# TODO: this is a hack, should be properly integrated into replace_idle_participants
 
     # Handle deterministic violations (hash mismatches)
     fee_events.extend(handle_deterministic_violations(
@@ -83,7 +83,7 @@ def process_transaction(
                 round=round_obj,
                 round_index=i,
                 label=labels[i],
-                transaction_budget=transaction_budget,
+                budget=transaction_budget,
                 event_sequence=event_sequence,
             )
             fee_events.extend(round_fee_events)

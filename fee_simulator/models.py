@@ -56,7 +56,7 @@ class Rotation(BaseModel):
             if isinstance(vote, list) and len(vote) > 1:
                 # Check if last element is a hash
                 if len(vote) == 3 or (
-                    len(vote) == 2 and vote[0] not in ["LeaderReceipt", "LeaderTimeout"]
+                    len(vote) == 2 and vote[0] not in ["LEADER_RECEIPT", "LEADER_TIMEOUT"]
                 ):
                     hash_value = vote[-1]
                     if not re.match(r"^0x[a-fA-F0-9]+$", hash_value):
@@ -77,11 +77,11 @@ class FeeEvent(BaseModel):
     model_config = ConfigDict(frozen=True)
     sequence_id: int
     address: str
-    round_index: int
-    round_label: RoundLabel
-    role: Role
-    vote: Vote
-    hash: str
+    round_index: Optional[int] = None
+    round_label: Optional[RoundLabel] = None
+    role: Optional[Role] = None
+    vote: Optional[Vote] = None
+    hash: Optional[str] = None
     cost: int = Field(default=0, ge=0)
     staked: int = Field(default=0, ge=0)
     earned: int = Field(default=0, ge=0)
