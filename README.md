@@ -2,201 +2,192 @@
 
 ## Overview
 
-This project implements a comprehensive fee distribution system for blockchain validator networks. It models how transaction fees are distributed among network participants based on their roles, voting behavior, and consensus patterns. The system supports complex scenarios including normal validation rounds, appeals, timeouts, and various consensus patterns.
+The GenLayer Fee Distribution Simulator is a Python-based tool designed to model and analyze the fee distribution mechanics of a blockchain validator network, specifically for the GenLayer protocol. It simulates how transaction fees are allocated among participants (leaders, validators, senders, and appealants) based on their roles, voting behavior, and consensus outcomes. The simulator supports a variety of scenarios, including normal rounds, leader and validator appeals, timeouts, and penalties for non-compliance, providing insights into the economic incentives of the network.
 
 ## Key Features
 
-- **Role-based Fee Distribution:** Allocates fees to different roles including leaders, validators, senders, and appealants
+- **Role-Based Fee Distribution**: Allocates fees to participants based on their roles (Leader, Validator, Sender, Appealant).
+- **Consensus-Driven Rewards and Penalties**: Rewards majority voters and penalizes minority or idle participants.
+- **Appeal Mechanisms**: Simulates successful and unsuccessful appeals with appeal bond calculations.
+- **Comprehensive Testing Suite**: Includes unit tests, scenario-based tests, and edge-case validation.
+- **Visualization Tools**: Provides formatted tables for transaction results, fee distributions, and summary statistics.
+- **Modular Design**: Organized into core logic, display utilities, and testing modules for easy extension.
 
-- **Consensus-Based Rewards:** Rewards validators who vote with the majority and penalizes those in the minority
+## Project Structure
 
-- **Appeal Processing:** Handles appeal bonds, successful and unsuccessful appeals
+The project is organized into the following key directories and files:
 
-- **Comprehensive Testing:** Includes statistical and combinatorial testing frameworks
-
-- **Visualization:** Pretty-prints transaction results and fee distributions
-
-## Project Structure
-
-- `distribute_fees.py`: Core fee distribution logic
-
-- `majority.py`: Functions for determining vote majority
-
-- `custom_types.py`: Pydantic models defining the system's data structures
-
-- `constants.py`: Configuration constants
-
-- `utils.py`: Utility functions for formatting and generating test data
-
-- `fee_distribution_tests.py`: Specific test scenarios
-
-- `statistical_testing.py`: Statistical sampling-based tests
-
-- `combinatorial_testing.py`: Comprehensive combinatorial testing
+- **fee_simulator/**
+    - **core/**: Core logic for fee distribution and transaction processing.
+        - `round_fee_distribution/*.py`: Implements fee distribution rules for various round types (e.g., normal rounds, appeals, timeouts).
+        - `bond_computing.py`: Calculates appeal bonds based on round indices and timeouts.
+        - `burns.py`: Computes burn amounts for unsuccessful appeals.
+        - `deterministic_violation.py`: Handles slashing for hash mismatches.
+        - `idleness.py`: Manages idle validator slashing and reserve replacements.
+        - `majority.py`: Determines vote and hash majorities.
+        - `refunds.py`: Calculates sender refunds.
+        - `round_labeling.py`: Labels rounds based on voting patterns and context.
+        - `transaction_processing.py`: Orchestrates the fee distribution process.
+    - **display/**: Visualization utilities for formatted output.
+        - `fee_distribution.py`: Displays detailed fee event tables.
+        - `summary_table.py`: Shows summarized fee distributions and round labels.
+        - `transaction_results.py`: Visualizes round and rotation details.
+        - `utils.py`: Formatting helpers for colored output and table creation.
+    - **fee_aggregators/**: Aggregates financial metrics per address.
+        - `address_metrics.py`: Computes costs, earnings, burns, and stakes.
+    - `constants.py`: Defines constants like round sizes and penalty coefficients.
+    - `models.py`: Pydantic models for data validation (e.g., FeeEvent, TransactionBudget).
+    - `types.py`: Type definitions for votes, roles, and round labels.
+    - `utils.py`: Utility functions for address generation and stake initialization.
+- **tests/**: Comprehensive test suite.
+    - `budget_and_refunds/*.py`: Tests for budget calculations and refunds.
+    - `round_types_tests/*.py`: Scenario-based tests for various round types.
+    - `slashing/*.py`: Tests for slashing mechanisms (e.g., idleness, violations).
+    - `conftest.py`: Pytest configuration for verbose/debug output.
+- `requirements.txt`: Lists project dependencies.
 
 ## How It Works
 
-### Core Components
+### Core Components
 
-1. Rounds & Rotations:
-
-- A transaction includes one or more rounds
-
-- Each round contains one or more rotations
-
-- Each rotation contains votes from validators
-
-2. Vote Types:
-
-- Agree: Validator agrees with the transaction
-
-- Disagree: Validator disagrees with the transaction
-
-- Timeout: Validator timed out without casting a vote
-
-- LeaderReceipt: Special vote type for the round leader
-
-3. Round Types:
-
-- normal_round: Standard validation round
-
-- appeal_round: Round initiated by an appeal
-
-- Various other specialized round types for different scenarios
-
-4. Fee Distribution Logic:
-
-- Leaders receive timeout fees for leadership responsibilities
-
-- Validators in the majority receive validation fees
-
-- Validators in the minority receive penalties (negative fees)
-
-- Appealants receive or lose appeal bonds based on appeal success
-
-- Senders may receive portions of unsuccessful appeal bonds
-
-### Fee Distribution Process
-
-1. Rounds are labeled based on their context and voting patterns
-
-2. Each round's fees are distributed according to its label
-
-3. Fees accumulate in a FeeDistribution object mapping addresses to their roles and fee amounts
-
-4. The final distribution shows how much each participant earned or lost
-
-## Testing Framework
-
-The project includes three types of testing:
-
-1. Scenario-based Testing (fee_distribution_tests.py):
-
-- Predefined scenarios testing specific edge cases
-
-- Clear visualization of inputs and outputs
-
-2. Statistical Testing (statistical_testing.py):
-
-- Uses prior probabilities to generate realistic scenarios
-
-- Models typical network behavior
-
-- Tests fee distribution across likely scenarios
-
-3. Combinatorial Testing (combinatorial_testing.py):
-
-- Systematically tests all combinations of factors
-
-- Provides comprehensive coverage of possible states
-
-- Includes complexity analysis to understand testing boundaries
-
-## Use Cases
-
-This system is useful for:
-
-- Economic Analysis: Studying incentive structures in GenLayer Protocol
-
-- Protocol Simulation: Validating economic models before deployment
-
-## Getting Started
-
-1. Run predefined test scenarios:
+1. **Rounds and Rotations**:
     
+    - A transaction consists of one or more rounds, each containing rotations.
+    - Rotations hold votes from validators and leaders, influencing fee distribution.
+2. **Vote Types**:
+    
+    - `AGREE`, `DISAGREE`, `TIMEOUT`, `IDLE`: Validator votes.
+    - `LEADER_RECEIPT`, `LEADER_TIMEOUT`: Leader-specific actions.
+    - Votes may include hashes for validation.
+3. **Round Types**:
+    
+    - `NORMAL_ROUND`: Standard validation round.
+    - `APPEAL_LEADER_SUCCESSFUL/UNSUCCESSFUL`: Leader appeal outcomes.
+    - `APPEAL_VALIDATOR_SUCCESSFUL/UNSUCCESSFUL`: Validator appeal outcomes.
+    - `LEADER_TIMEOUT_50_PERCENT`, `LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND`, etc.: Timeout scenarios.
+    - `SPLIT_PREVIOUS_APPEAL_BOND`: Distributes prior appeal bonds.
+4. **Fee Distribution Process**:
+    
+    - **Initialization**: Stakes are assigned to participants.
+    - **Idle Handling**: Idle validators are slashed and replaced by reserves.
+    - **Violation Handling**: Validators with mismatched hashes are slashed.
+    - **Round Labeling**: Rounds are labeled based on votes and context.
+    - **Fee Allocation**: Fees are distributed per round label, rewarding majority voters and penalizing others.
+    - **Refunds**: Senders receive refunds for overpaid fees.
+
+### Example Workflow
+
+1. A transaction is defined with a `TransactionBudget` (leader/validator timeouts, sender, appeals) and `TransactionRoundResults` (rounds and votes).
+2. The `process_transaction` function:
+    - Initializes stakes.
+    - Subtracts the total cost from the sender.
+    - Handles idle validators and violations.
+    - Labels rounds and distributes fees.
+    - Computes and applies sender refunds.
+3. Results are visualized using `display_summary_table`, `display_fee_distribution`, and `display_transaction_results`.
+
+## Installation
+
+1. Clone the repository:
+    
+    ```bash
+    git clone <repository_url>
+    cd genlayer-fee-simulator
+    ```
+    
+2. Create a virtual environment and activate it:
+    
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On Windows: venv\Scripts\activate
+    ```
+    
+3. Install dependencies:
+    
+    ```bash
+    pip install -r requirements.txt
+    ```
+    
+
+## Usage
+
+### Running Tests
+
+To run the entire test suite:
+
 ```bash
-   python fee_distribution_tests.py
-``` 
+pytest
+```
 
-2. Run statistical tests:
-    
-```bash    
-   python statistical_testing.py
-```    
+To run a specific test with verbose and debug output (displays formatted tables):
 
-2. Run combinatorial tests:
-```    
-   python combinatorial_testing.py
-``` 
+```bash
+pytest tests/round_types_tests/test_normal_round.py -s --verbose-output --debug-output
+```
 
-2. Create custom scenarios:
-    
+### Creating Custom Scenarios
+
+You can create and simulate custom transaction scenarios programmatically:
+
 ```python
-       from custom_types import (
-    
-           FeeDistribution, TransactionBudget, 
-    
-           TransactionRoundResults, Round, Rotation
-    
-       )
-    
-       from distribute_fees import distribute_fees
-    
-       # Initialize fee distribution
-    
-       fee_distribution = initialize_fee_distribution()
-    
-       # Create your custom scenario
-    
-       transaction_results = TransactionRoundResults(...)
-    
-       transaction_budget = TransactionBudget(...)
-    
-       # Distribute fees
-    
-       result, round_labels = distribute_fees(
-    
-           fee_distribution=fee_distribution,
-    
-           transaction_results=transaction_results,
-    
-           transaction_budget=transaction_budget
-    
-       )
-```    
+from fee_simulator.models import TransactionBudget, TransactionRoundResults, Round, Rotation, FeeEvent
+from fee_simulator.core.transaction_processing import process_transaction
+from fee_simulator.utils import generate_random_eth_address
+from fee_simulator.display import display_summary_table, display_transaction_results, display_fee_distribution
 
-## Visualization
+# Generate addresses
+addresses = [generate_random_eth_address() for _ in range(6)]
 
-The system includes robust visualization for:
+# Define budget
+budget = TransactionBudget(
+    leaderTimeout=100,
+    validatorsTimeout=200,
+    appealRounds=0,
+    rotations=[0],
+    senderAddress=addresses[5],
+    appeals=[],
+    staking_distribution="constant"
+)
 
-- Transaction structure with color-coded vote types
+# Define transaction results
+rotation = Rotation(
+    votes={
+        addresses[0]: ["LEADER_RECEIPT", "AGREE"],
+        addresses[1]: "AGREE",
+        addresses[2]: "AGREE",
+        addresses[3]: "AGREE",
+        addresses[4]: "DISAGREE"
+    }
+)
+results = TransactionRoundResults(rounds=[Round(rotations=[rotation])])
 
-- Round labels and consensus outcomes
+# Process transaction
+fee_events, round_labels = process_transaction(addresses, results, budget)
 
-- Detailed fee distribution with color-coded positive/negative amounts
+# Display results
+display_summary_table(fee_events, results, budget, round_labels)
+display_transaction_results(results, round_labels)
+display_fee_distribution(fee_events)
+```
 
-- Summary statistics for overall fee distribution
+## Testing Framework
 
-## Future Development
+The test suite covers:
 
-- Auto-computing of bonds per unsuccessful appeal type
+- **Unit Tests**: Validate individual components (e.g., budget calculations, refunds).
+- **Scenario-Based Tests**: Test specific round types (e.g., `test_normal_round.py`, `test_appeal_leader_successful.py`).
+- **Slashing Tests**: Verify slashing for idleness and deterministic violations.
+- **Edge Cases**: Handle scenarios like empty rounds, undetermined majorities, and unsuccessful appeals.
 
-- Building a frontend with Streamlit for easy to see
+Run tests with verbose output to inspect detailed fee distributions and transaction outcomes.
 
-- Adding more unit tests
+## Use Cases
 
-- Expanding documentation
+- **Economic Analysis**: Evaluate the incentive structure of the GenLayer protocol.
+- **Protocol Validation**: Simulate fee distribution before deploying protocol changes.
+- **Education**: Understand blockchain consensus and fee mechanics.
+- **Development**: Test and refine fee distribution algorithms.
 
-## Summary
+## License
 
-This GenLayer fee distribution simulator provides a sophisticated model for incentivizing correct behavior in validator networks. By rewarding consensus and penalizing deviation, it creates economic incentives for network health while providing mechanisms for appeals and error correction.
+This project is licensed under the MIT License. See the LICENSE file for details.

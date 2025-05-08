@@ -1,23 +1,32 @@
-from fee_simulator.models.custom_types import (
+from fee_simulator.models import (
     TransactionRoundResults,
     Round,
     Rotation,
     TransactionBudget,
 )
-from fee_simulator.core.distribute_fees import distribute_fees
-from fee_simulator.models.constants import addresses_pool, penalty_reward_coefficient
-from fee_simulator.core.utils import (
-    initialize_fee_distribution,
-    compute_total_fees,
+from fee_simulator.core.transaction_processing import process_transaction
+from fee_simulator.utils import (
     compute_total_cost,
+    generate_random_eth_address
 )
-from fee_simulator.core.display import (
-    pretty_print_fee_distribution,
-    pretty_print_transaction_results,
+from fee_simulator.display import (
+    display_transaction_results,
+    display_fee_distribution,
+    display_summary_table,
 )
+from fee_simulator.fee_aggregators.address_metrics import (
+    compute_all_zeros,
+    compute_total_costs,
+    compute_total_earnings,
+    compute_total_burnt,
+    compute_total_balance,
+)
+from fee_simulator.constants import PENALTY_REWARD_COEFFICIENT
 
 leaderTimeout = 100
 validatorsTimeout = 200
+
+addresses_pool = [generate_random_eth_address() for _ in range(2000)]
 
 default_budget = TransactionBudget(
     leaderTimeout=leaderTimeout,
@@ -29,252 +38,261 @@ default_budget = TransactionBudget(
     staking_distribution="constant",
 )
 
-
-def test_normal_round(verbose):
+def test_normal_round(verbose, debug):
     """Test fee distribution for a normal round with all validators agreeing."""
     # Setup
     rotation = Rotation(
         votes={
-            addresses_pool[0]: ["LeaderReceipt", "Agree"],
-            addresses_pool[1]: "Agree",
-            addresses_pool[2]: "Agree",
-            addresses_pool[3]: "Agree",
-            addresses_pool[4]: "Agree",
+            addresses_pool[0]: ["LEADER_RECEIPT", "AGREE"],
+            addresses_pool[1]: "AGREE",
+            addresses_pool[2]: "AGREE",
+            addresses_pool[3]: "AGREE",
+            addresses_pool[4]: "AGREE",
         }
     )
     round = Round(rotations=[rotation])
     transaction_results = TransactionRoundResults(rounds=[round])
     transaction_budget = default_budget
-    fee_distribution = initialize_fee_distribution()
+    # Note: initialize_constant_stakes is called within process_transaction, no need to call it separately
 
     # Execute
-    result, round_labels = distribute_fees(
-        fee_distribution=fee_distribution,
+    fee_events, round_labels = process_transaction(
+        addresses=addresses_pool,
         transaction_results=transaction_results,
         transaction_budget=transaction_budget,
     )
 
     # Print if verbose
     if verbose:
-        pretty_print_transaction_results(transaction_results, round_labels)
-        pretty_print_fee_distribution(result)
+        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_transaction_results(transaction_results, round_labels)
+
+    if debug:
+        display_fee_distribution(fee_events)
 
     # Round Label Assert
     assert round_labels == [
-        "normal_round"
-    ], f"Expected ['normal_round'], got {round_labels}"
+        "NORMAL_ROUND"
+    ], f"Expected ['NORMAL_ROUND'], got {round_labels}"
 
     # Leader Fees Assert
     assert (
-        compute_total_fees(result.fees[addresses_pool[0]])
+        compute_total_earnings(fee_events, addresses_pool[0])
         == leaderTimeout + validatorsTimeout
     ), "Leader should have 100 (leader) + 200 (validator)"
 
     # Validator Fees Assert
     assert all(
-        compute_total_fees(result.fees[addresses_pool[i]]) == validatorsTimeout
+        compute_total_earnings(fee_events, addresses_pool[i]) == validatorsTimeout
         for i in [1, 2, 3, 4]
     ), "Validator should have 200"
 
     # Sender Fees Assert
-    assert compute_total_fees(
-        result.fees[default_budget.senderAddress]
-    ) == -compute_total_cost(
-        default_budget
-    ), "Sender should have negative fees equal to the total cost of the transaction in normal round"
+    total_cost = compute_total_cost(transaction_budget)
+    assert (
+        compute_total_costs(fee_events, default_budget.senderAddress) == total_cost
+    ), f"Sender should have costs equal to total transaction cost: {total_cost}"
 
     # Everyone Else 0 Fees Assert
     assert all(
-        compute_total_fees(result.fees[addresses_pool[i]]) == 0
+        compute_all_zeros(fee_events, addresses_pool[i])
         for i in range(len(addresses_pool))
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"
 
-
-def test_normal_round_with_minority_penalties(verbose):
+def test_normal_round_with_minority_penalties(verbose, debug):
     """Test normal round with penalties for validators in the minority (3 Agree, 1 Disagree, 1 Timeout)."""
     # Setup
     rotation = Rotation(
         votes={
-            addresses_pool[0]: ["LeaderReceipt", "Agree"],  # Majority
-            addresses_pool[1]: "Agree",  # Majority
-            addresses_pool[2]: "Agree",  # Majority
-            addresses_pool[3]: "Disagree",  # Minority
-            addresses_pool[4]: "Timeout",  # Minority
+            addresses_pool[0]: ["LEADER_RECEIPT", "AGREE"],  # Majority
+            addresses_pool[1]: "AGREE",  # Majority
+            addresses_pool[2]: "AGREE",  # Majority
+            addresses_pool[3]: "DISAGREE",  # Minority
+            addresses_pool[4]: "TIMEOUT",  # Minority
         }
     )
     round = Round(rotations=[rotation])
     transaction_results = TransactionRoundResults(rounds=[round])
     transaction_budget = default_budget
-    fee_distribution = initialize_fee_distribution()
 
     # Execute
-    result, round_labels = distribute_fees(
-        fee_distribution=fee_distribution,
+    fee_events, round_labels = process_transaction(
+        addresses=addresses_pool,
         transaction_results=transaction_results,
         transaction_budget=transaction_budget,
     )
 
     # Print if verbose
     if verbose:
-        pretty_print_transaction_results(transaction_results, round_labels)
-        pretty_print_fee_distribution(result)
+        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_transaction_results(transaction_results, round_labels)
 
+    if debug:
+        display_fee_distribution(fee_events)
+   
     # Round Label Assert
     assert round_labels == [
-        "normal_round"
-    ], f"Expected ['normal_round'], got {round_labels}"
+        "NORMAL_ROUND"
+    ], f"Expected ['NORMAL_ROUND'], got {round_labels}"
 
     # Leader Fees Assert
     assert (
-        compute_total_fees(result.fees[addresses_pool[0]])
+        compute_total_earnings(fee_events, addresses_pool[0])
         == leaderTimeout + validatorsTimeout
     ), "Leader should have 100 (leader) + 200 (validator)"
 
     # Majority Validator Fees Assert
     assert all(
-        compute_total_fees(result.fees[addresses_pool[i]]) == validatorsTimeout
+        compute_total_earnings(fee_events, addresses_pool[i]) == validatorsTimeout
         for i in [1, 2]
-    ), "Validator in majority should have 200"
+    ), "Validators in majority should have 200"
 
     # Minority Validator Fees Assert
     assert all(
-        compute_total_fees(result.fees[addresses_pool[i]])
-        == -penalty_reward_coefficient * validatorsTimeout
+        compute_total_burnt(fee_events, addresses_pool[i])
+        == PENALTY_REWARD_COEFFICIENT * validatorsTimeout
         for i in [3, 4]
-    ), "Validator in minority should have 200"
+    ), "Validators in minority should have burned 200"
 
     # Sender Fees Assert
+    total_cost = compute_total_cost(transaction_budget)
     assert (
-        compute_total_fees(result.fees[default_budget.senderAddress])
-        == -leaderTimeout - validatorsTimeout
-    ), "Sender should have negative fees equal to the leaderTimeout as the two negative validators fees cancel out the positive ones so only the leader fee is left"
+        compute_total_costs(fee_events, default_budget.senderAddress) == total_cost
+    ), f"Sender should have costs equal to total transaction cost: {total_cost}"
+
+    # Sender Total Balance Assert
+    total_balance = compute_total_balance(fee_events, default_budget.senderAddress)
+    assert (
+        -leaderTimeout - 3*validatorsTimeout == total_balance
+    ), f"Sender should have been refunded and thus have a balance of: {-leaderTimeout - 3*validatorsTimeout}"
 
     # Everyone Else 0 Fees Assert
     assert all(
-        compute_total_fees(result.fees[addresses_pool[i]]) == 0
+        compute_all_zeros(fee_events, addresses_pool[i])
         for i in range(len(addresses_pool))
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"
 
 
-def test_normal_round_no_majority(verbose):
+def test_normal_round_no_majority(verbose, debug):
     """Test normal round with no majority (2 Agree, 2 Disagree, 1 Timeout)."""
     # Setup
     rotation = Rotation(
         votes={
-            addresses_pool[0]: ["LeaderReceipt", "Agree"],  # No majority
-            addresses_pool[1]: "Agree",  # No majority
-            addresses_pool[2]: "Disagree",  # No majority
-            addresses_pool[3]: "Disagree",  # No majority
-            addresses_pool[4]: "Timeout",  # No majority
+            addresses_pool[0]: ["LEADER_RECEIPT", "AGREE"],  # No majority
+            addresses_pool[1]: "AGREE",  # No majority
+            addresses_pool[2]: "DISAGREE",  # No majority
+            addresses_pool[3]: "DISAGREE",  # No majority
+            addresses_pool[4]: "TIMEOUT",  # No majority
         }
     )
     round = Round(rotations=[rotation])
     transaction_results = TransactionRoundResults(rounds=[round])
     transaction_budget = default_budget
-    fee_distribution = initialize_fee_distribution()
 
     # Execute
-    result, round_labels = distribute_fees(
-        fee_distribution=fee_distribution,
+    fee_events, round_labels = process_transaction(
+        addresses=addresses_pool,
         transaction_results=transaction_results,
         transaction_budget=transaction_budget,
     )
 
     # Print if verbose
     if verbose:
-        pretty_print_transaction_results(transaction_results, round_labels)
-        pretty_print_fee_distribution(result)
+        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_transaction_results(transaction_results, round_labels)
+
+    if debug:
+        display_fee_distribution(fee_events)
 
     # Round Label Assert
     assert round_labels == [
-        "normal_round"
-    ], f"Expected ['normal_round'], got {round_labels}"
+        "NORMAL_ROUND"
+    ], f"Expected ['NORMAL_ROUND'], got {round_labels}"
 
     # Leader Fees Assert
     assert (
-        compute_total_fees(result.fees[addresses_pool[0]])
+        compute_total_earnings(fee_events, addresses_pool[0])
         == leaderTimeout + validatorsTimeout
     ), "Leader should have 100 (leader) + 200 (validator)"
 
     # Validator Fees Assert
     assert all(
-        compute_total_fees(result.fees[addresses_pool[i]]) == validatorsTimeout
+        compute_total_earnings(fee_events, addresses_pool[i]) == validatorsTimeout
         for i in [1, 2, 3, 4]
-    ), "Validator should have 200"
+    ), "Validators should have 200 due to no majority"
 
     # Sender Fees Assert
-    assert compute_total_fees(
-        result.fees[default_budget.senderAddress]
-    ) == -compute_total_cost(
-        default_budget
-    ), "Sender should have negative fees equal to the total cost of the transaction in normal round"
+    total_cost = compute_total_cost(transaction_budget)
+    assert (
+        compute_total_costs(fee_events, default_budget.senderAddress) == total_cost
+    ), f"Sender should have costs equal to total transaction cost: {total_cost}"
 
     # Everyone Else 0 Fees Assert
     assert all(
-        compute_total_fees(result.fees[addresses_pool[i]]) == 0
+        compute_all_zeros(fee_events, addresses_pool[i])
         for i in range(len(addresses_pool))
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"
 
-
-def test_normal_round_no_majority_disagree(verbose):
-    """Test normal round with no majority (2 Agree, 2 Disagree, 1 Timeout)."""
+def test_normal_round_no_majority_disagree(verbose, debug):
+    """Test normal round with no majority (2 Agree, 3 Disagree)."""
     # Setup
     rotation = Rotation(
         votes={
-            addresses_pool[0]: ["LeaderReceipt", "Agree"],  # No majority
-            addresses_pool[1]: "Agree",  # No majority
-            addresses_pool[2]: "Disagree",  # No majority
-            addresses_pool[3]: "Disagree",  # No majority
-            addresses_pool[4]: "Disagree",  # No majority
+            addresses_pool[0]: ["LEADER_RECEIPT", "AGREE"],  # No majority
+            addresses_pool[1]: "AGREE",  # No majority
+            addresses_pool[2]: "DISAGREE",  # No majority
+            addresses_pool[3]: "DISAGREE",  # No majority
+            addresses_pool[4]: "DISAGREE",  # No majority
         }
     )
     round = Round(rotations=[rotation])
     transaction_results = TransactionRoundResults(rounds=[round])
     transaction_budget = default_budget
-    fee_distribution = initialize_fee_distribution()
 
     # Execute
-    result, round_labels = distribute_fees(
-        fee_distribution=fee_distribution,
+    fee_events, round_labels = process_transaction(
+        addresses=addresses_pool,
         transaction_results=transaction_results,
         transaction_budget=transaction_budget,
     )
 
     # Print if verbose
     if verbose:
-        pretty_print_transaction_results(transaction_results, round_labels)
-        pretty_print_fee_distribution(result)
+        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_transaction_results(transaction_results, round_labels)
+
+    if debug:
+        display_fee_distribution(fee_events)
 
     # Round Label Assert
     assert round_labels == [
-        "normal_round"
-    ], f"Expected ['normal_round'], got {round_labels}"
+        "NORMAL_ROUND"
+    ], f"Expected ['NORMAL_ROUND'], got {round_labels}"
 
     # Leader Fees Assert
     assert (
-        compute_total_fees(result.fees[addresses_pool[0]])
+        compute_total_earnings(fee_events, addresses_pool[0])
         == leaderTimeout + validatorsTimeout
     ), "Leader should have 100 (leader) + 200 (validator)"
 
     # Validator Fees Assert
     assert all(
-        compute_total_fees(result.fees[addresses_pool[i]]) == validatorsTimeout
+        compute_total_earnings(fee_events, addresses_pool[i]) == validatorsTimeout
         for i in [1, 2, 3, 4]
-    ), "Validator should have 200"
+    ), "Validators should have 200 due to no majority"
 
     # Sender Fees Assert
-    assert compute_total_fees(
-        result.fees[default_budget.senderAddress]
-    ) == -compute_total_cost(
-        default_budget
-    ), "Sender should have negative fees equal to the total cost of the transaction in normal round"
+    total_cost = compute_total_cost(transaction_budget)
+    assert (
+        compute_total_costs(fee_events, default_budget.senderAddress) == total_cost
+    ), f"Sender should have costs equal to total transaction cost: {total_cost}"
 
     # Everyone Else 0 Fees Assert
     assert all(
-        compute_total_fees(result.fees[addresses_pool[i]]) == 0
+        compute_all_zeros(fee_events, addresses_pool[i])
         for i in range(len(addresses_pool))
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"

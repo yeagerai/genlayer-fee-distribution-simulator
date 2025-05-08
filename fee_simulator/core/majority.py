@@ -1,10 +1,10 @@
-from typing import Dict, List, Any, Tuple, Union, Optional
-from fee_simulator.models.custom_types import VoteType, VoteValue, MajorityOutcome
+from typing import Dict, List, Tuple, Optional
+from fee_simulator.types import Vote, MajorityOutcome
 from collections import Counter
-from fee_simulator.models.constants import DEFAULT_HASH
+from fee_simulator.constants import DEFAULT_HASH
 
 
-def normalize_vote(vote_value: VoteValue) -> VoteType:
+def normalize_vote(vote_value: Vote) -> Vote:
     """
     Convert any vote value to a standard VoteType for comparison.
 
@@ -18,13 +18,13 @@ def normalize_vote(vote_value: VoteValue) -> VoteType:
         # Return the vote type (second element for leader, first for validator)
         return (
             vote_value[1]
-            if vote_value[0] in ["LeaderReceipt", "LeaderTimeout"]
+            if vote_value[0] in ["LEADER_RECEIPT", "LEADER_TIMEOUT"]
             else vote_value[0]
         )
     return vote_value
 
 
-def extract_hash(vote_value: VoteValue) -> str:
+def extract_hash(vote_value: Vote) -> str:
     """
     Extract hash from a vote value if present.
 
@@ -37,7 +37,7 @@ def extract_hash(vote_value: VoteValue) -> str:
     if not isinstance(vote_value, list) or len(vote_value) < 2:
         return DEFAULT_HASH
 
-    if vote_value[0] in ["LeaderReceipt", "LeaderTimeout"]:
+    if vote_value[0] in ["LEADER_RECEIPT", "LEADER_TIMEOUT"]:
         # ["LeaderReceipt", "Vote", "Hash"]
         return vote_value[2] if len(vote_value) >= 3 else DEFAULT_HASH
     else:
@@ -45,7 +45,7 @@ def extract_hash(vote_value: VoteValue) -> str:
         return vote_value[1]
 
 
-def compute_majority(rotation: Dict[str, VoteValue]) -> str:
+def compute_majority(rotation: Dict[str, Vote]) -> MajorityOutcome:
     """
     Compute the majority vote type.
 
@@ -59,7 +59,7 @@ def compute_majority(rotation: Dict[str, VoteValue]) -> str:
         return "UNDETERMINED"
 
     # Count votes by type
-    vote_counts = {"Agree": 0, "Disagree": 0, "Timeout": 0, "Idle": 0}
+    vote_counts = {"AGREE": 0, "DISAGREE": 0, "TIMEOUT": 0, "IDLE": 0}
     for addr, vote in rotation.items():
         vote_type = normalize_vote(vote)
         if vote_type in vote_counts:
@@ -69,17 +69,17 @@ def compute_majority(rotation: Dict[str, VoteValue]) -> str:
     total_votes = len(rotation)
     majority_threshold = (total_votes // 2) + 1
 
-    if vote_counts["Agree"] >= majority_threshold:
-        return "Agree"
-    elif vote_counts["Disagree"] >= majority_threshold:
+    if vote_counts["AGREE"] >= majority_threshold:
+        return "AGREE"
+    elif vote_counts["DISAGREE"] >= majority_threshold:
         return "UNDETERMINED"
-    elif vote_counts["Timeout"] >= majority_threshold:
-        return "Timeout"
+    elif vote_counts["TIMEOUT"] >= majority_threshold:
+        return "TIMEOUT"
     else:
         return "UNDETERMINED"
 
 
-def compute_majority_hash(rotation: Dict[str, VoteValue]) -> Optional[str]:
+def compute_majority_hash(rotation: Dict[str, Vote]) -> Optional[str]:
     """
     Compute the majority hash, regardless of vote type.
 
@@ -118,7 +118,7 @@ def compute_majority_hash(rotation: Dict[str, VoteValue]) -> Optional[str]:
 
 
 def who_is_in_vote_majority(
-    rotation: Dict[str, VoteValue], majority_vote: str
+    rotation: Dict[str, Vote], majority_vote: MajorityOutcome
 ) -> Tuple[List[str], List[str]]:
     """
     Determine which addresses voted for the majority vote type.
@@ -140,7 +140,7 @@ def who_is_in_vote_majority(
 
 
 def who_is_in_hash_majority(
-    rotation: Dict[str, VoteValue], majority_hash: str
+    rotation: Dict[str, Vote], majority_hash: str
 ) -> Tuple[List[str], List[str]]:
     """
     Determine which addresses provided the majority hash.
