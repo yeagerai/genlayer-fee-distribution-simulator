@@ -87,6 +87,30 @@ def create_table(headers: List[str], data: List[List[str]], title: str = "") -> 
         return
     print(tabulate(data, headers=headers, tablefmt="fancy_grid"))
 
+def _create_table_rows(headers: List[str], data: List[List[str]], title: str = "") -> List[str]:
+    """
+    Create a table and return its rows as a list of strings, without printing.
+
+    Args:
+        headers: List of column headers.
+        data: List of rows, where each row is a list of column values.
+        title: Optional title for the table.
+
+    Returns:
+        List of strings representing each row of the table, including the title if provided.
+    """
+    table_rows = []
+    if title:
+        table_rows.append(f"{Colors.BOLD}{title}:{Colors.ENDC}")
+    if not data:
+        table_rows.append(f"{Colors.YELLOW}No data to display.{Colors.ENDC}")
+        return table_rows
+
+    # Use tabulate to generate the table as a string, then split into rows
+    table_str = tabulate(data, headers=headers, tablefmt="fancy_grid")
+    table_rows.extend(table_str.split("\n"))
+    return table_rows
+
 def get_vote_summary(votes: Dict[str, Vote]) -> List[List[str]]:
     """Summarize votes by type and count."""
     vote_counts = {

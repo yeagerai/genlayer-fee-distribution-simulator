@@ -26,7 +26,7 @@ def display_fee_distribution(fee_events: List[FeeEvent], verbose: bool = False) 
         fee_events: List of FeeEvent objects to display.
         verbose: Enable detailed logging if True (currently unused).
     """
-    print(f"\n{Colors.BOLD}{Colors.HEADER}=== FEE EVENT DISTRIBUTION ==={Colors.ENDC}\n")
+    print(f"\n{Colors.BOLD}{Colors.HEADER}=== DEBUG: FEE EVENT DISTRIBUTION ==={Colors.ENDC}\n")
 
     # Prepare table headers
     headers = [

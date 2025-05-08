@@ -1,10 +1,11 @@
 from typing import List
 from math import floor
-from fee_simulator.models import Round, TransactionBudget, FeeEvent, EventSequence
+from fee_simulator.models import TransactionRoundResults, TransactionBudget, FeeEvent, EventSequence
 from fee_simulator.core.majority import normalize_vote
 
-def apply_leader_timeout_50_previous_appeal_bond(round: Round, round_index: int, budget: TransactionBudget, event_sequence: EventSequence) -> List[FeeEvent]:
+def apply_leader_timeout_50_previous_appeal_bond(transaction_results: TransactionRoundResults, round_index: int, budget: TransactionBudget, event_sequence: EventSequence) -> List[FeeEvent]:
     events = []
+    round = transaction_results.rounds[round_index]
     if not round.rotations or not budget.appeals or round_index < 1 or round_index - 1 > len(budget.appeals):
         return events
 

@@ -21,7 +21,7 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_burnt,
     compute_total_balance,
 )
-from fee_simulator.constants import DEFAULT_STAKE, PENALTY_REWARD_COEFFICIENT
+from fee_simulator.constants import PENALTY_REWARD_COEFFICIENT
 
 leaderTimeout = 100
 validatorsTimeout = 200
@@ -38,7 +38,7 @@ default_budget = TransactionBudget(
     staking_distribution="constant",
 )
 
-def test_normal_round(verbose):
+def test_normal_round(verbose, debug):
     """Test fee distribution for a normal round with all validators agreeing."""
     # Setup
     rotation = Rotation(
@@ -64,9 +64,11 @@ def test_normal_round(verbose):
 
     # Print if verbose
     if verbose:
-        display_transaction_results(transaction_results, round_labels)
-        display_fee_distribution(fee_events)
         display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_transaction_results(transaction_results, round_labels)
+
+    if debug:
+        display_fee_distribution(fee_events)
 
     # Round Label Assert
     assert round_labels == [
@@ -98,7 +100,7 @@ def test_normal_round(verbose):
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"
 
-def test_normal_round_with_minority_penalties(verbose):
+def test_normal_round_with_minority_penalties(verbose, debug):
     """Test normal round with penalties for validators in the minority (3 Agree, 1 Disagree, 1 Timeout)."""
     # Setup
     rotation = Rotation(
@@ -123,10 +125,12 @@ def test_normal_round_with_minority_penalties(verbose):
 
     # Print if verbose
     if verbose:
-        display_transaction_results(transaction_results, round_labels)
-        display_fee_distribution(fee_events)
         display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_transaction_results(transaction_results, round_labels)
 
+    if debug:
+        display_fee_distribution(fee_events)
+   
     # Round Label Assert
     assert round_labels == [
         "NORMAL_ROUND"
@@ -170,7 +174,8 @@ def test_normal_round_with_minority_penalties(verbose):
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"
 
-def test_normal_round_no_majority(verbose):
+
+def test_normal_round_no_majority(verbose, debug):
     """Test normal round with no majority (2 Agree, 2 Disagree, 1 Timeout)."""
     # Setup
     rotation = Rotation(
@@ -195,9 +200,11 @@ def test_normal_round_no_majority(verbose):
 
     # Print if verbose
     if verbose:
-        display_transaction_results(transaction_results, round_labels)
-        display_fee_distribution(fee_events)
         display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_transaction_results(transaction_results, round_labels)
+
+    if debug:
+        display_fee_distribution(fee_events)
 
     # Round Label Assert
     assert round_labels == [
@@ -229,7 +236,7 @@ def test_normal_round_no_majority(verbose):
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"
 
-def test_normal_round_no_majority_disagree(verbose):
+def test_normal_round_no_majority_disagree(verbose, debug):
     """Test normal round with no majority (2 Agree, 3 Disagree)."""
     # Setup
     rotation = Rotation(
@@ -254,9 +261,11 @@ def test_normal_round_no_majority_disagree(verbose):
 
     # Print if verbose
     if verbose:
-        display_transaction_results(transaction_results, round_labels)
-        display_fee_distribution(fee_events)
         display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_transaction_results(transaction_results, round_labels)
+
+    if debug:
+        display_fee_distribution(fee_events)
 
     # Round Label Assert
     assert round_labels == [

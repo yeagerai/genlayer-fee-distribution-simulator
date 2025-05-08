@@ -1,6 +1,9 @@
-from typing import List
-from fee_simulator.models import TransactionRoundResults, RoundLabel
-from fee_simulator.display.utils import Colors, ROUND_LABEL_COLORS, VOTE_TYPE_COLORS, format_address, format_vote, create_table, get_vote_summary
+from typing import List, Dict
+from tabulate import tabulate
+from fee_simulator.models import TransactionRoundResults, RoundLabel, Round, Rotation
+from fee_simulator.display.utils import Colors, ROUND_LABEL_COLORS, VOTE_TYPE_COLORS, format_address, format_vote, _create_table_rows, get_vote_summary
+from fee_simulator.core.majority import compute_majority, normalize_vote
+
 
 def display_transaction_results(
     transaction_results: TransactionRoundResults,
@@ -8,7 +11,7 @@ def display_transaction_results(
     verbose: bool = False,
 ) -> None:
     """
-    Display transaction results with formatted tables for rounds, rotations, and votes.
+    Display transaction results with formatted tables for rounds, rotations, and votes side by side.
 
     Args:
         transaction_results: Transaction round results to display.
@@ -21,7 +24,15 @@ def display_transaction_results(
         # Display round header with label
         label = round_labels[round_idx] if round_idx < len(round_labels) else f"Round {round_idx}"
         label_color = ROUND_LABEL_COLORS.get(label, Colors.CYAN)
-        print(f"{Colors.BOLD}{Colors.CYAN}Round {round_idx}{Colors.ENDC} -- {Colors.colorize(label, label_color)}:")
+        print()  # Add a small space after each rotation
+        print(f"{Colors.BOLD}{Colors.CYAN}Distribution Label {round_idx}{Colors.ENDC} -- {Colors.colorize(label, label_color)}:")
+
+        # Display majority
+        majority = compute_majority(round_obj.rotations[0].votes)
+        print()  # Add a small space after each rotation
+        majority_color = Colors.GREEN if majority != "UNDETERMINED" else Colors.YELLOW
+        print(f"    {Colors.BOLD}Majority:{Colors.ENDC} {Colors.colorize(majority, majority_color)}")
+        print()  # Add a small space after each rotation
 
         if not round_obj.rotations:
             print(f"  {Colors.YELLOW}Empty round - no rotations{Colors.ENDC}")
@@ -46,9 +57,10 @@ def display_transaction_results(
                     format_address(addr),
                     Colors.colorize(vote_display, vote_color),
                 ])
-            create_table(headers=["ADDRESS", "VOTE"], data=vote_data)
+            votes_table = _create_table_rows(headers=["ADDRESS", "VOTE"], data=vote_data, title="Votes")
 
             # Reserve votes table
+            reserve_table = []
             if rotation.reserve_votes:
                 reserve_data = []
                 for addr, vote in rotation.reserve_votes.items():
@@ -57,8 +69,47 @@ def display_transaction_results(
                         format_address(addr),
                         Colors.colorize(vote_display, Colors.BLUE),
                     ])
-                create_table(headers=["ADDRESS", "RESERVE VOTE"], data=reserve_data, title="Reserve Votes")
+                reserve_table = _create_table_rows(headers=["ADDRESS", "RESERVE VOTE"], data=reserve_data, title="Reserve Votes")
 
             # Vote summary table
             summary_data = get_vote_summary(rotation.votes)
-            create_table(headers=["VOTE TYPE", "COUNT"], data=summary_data, title="Vote Summary")
+            summary_table = _create_table_rows(headers=["VOTE TYPE", "COUNT"], data=summary_data, title="Vote Summary")
+
+            # Remove the title rows from votes_table, reserve_table, and summary_table for alignment
+            votes_table_rows = votes_table[1:] if votes_table and votes_table[0].startswith(f"{Colors.BOLD}Votes:") else votes_table
+            reserve_table_rows = reserve_table[1:] if reserve_table and reserve_table[0].startswith(f"{Colors.BOLD}Reserve Votes:") else reserve_table
+            summary_table_rows = summary_table[1:] if summary_table and summary_table[0].startswith(f"{Colors.BOLD}Vote Summary:") else summary_table
+
+            # Print titles side by side
+            # titles = [f"{Colors.BOLD}Votes:{Colors.ENDC}"]
+            # if reserve_table:
+            #     titles.append(" " * 5 + f"{Colors.BOLD}Reserve Votes:{Colors.ENDC}")
+            # titles.append(" " * 5 + f"{Colors.BOLD}Vote Summary:{Colors.ENDC}")
+            # print("".join(titles))
+
+            # Determine the maximum height of the tables
+            max_height = max(len(votes_table_rows), len(reserve_table_rows) if reserve_table_rows else 0, len(summary_table_rows))
+
+            # Pad shorter tables with empty strings to align them
+            votes_width = len(votes_table_rows[0]) if votes_table_rows else 0
+            votes_table_rows.extend([" " * votes_width] * (max_height - len(votes_table_rows)))
+
+            reserve_width = len(reserve_table_rows[0]) if reserve_table_rows else 0
+            if reserve_table_rows:
+                reserve_table_rows.extend([" " * reserve_width] * (max_height - len(reserve_table_rows)))
+            else:
+                reserve_table_rows = [""] * max_height
+
+            summary_width = len(summary_table_rows[0]) if summary_table_rows else 0
+            summary_table_rows.extend([" " * summary_width] * (max_height - len(summary_table_rows)))
+
+            # Print tables side by side
+            for i in range(max_height):
+                row_parts = [votes_table_rows[i]]
+                if reserve_table_rows[i].strip():
+                    row_parts.append(" " * 5)  # Separator between tables
+                    row_parts.append(reserve_table_rows[i])
+                row_parts.append(" " * 5)
+                row_parts.append(summary_table_rows[i])
+                print("".join(row_parts))
+

@@ -1,9 +1,9 @@
 from typing import List
 from math import floor
-from fee_simulator.models import Round, TransactionBudget, FeeEvent, EventSequence
+from fee_simulator.models import TransactionRoundResults, TransactionBudget, FeeEvent, EventSequence
 from fee_simulator.core.bond_computing import compute_appeal_bond
 
-def apply_appeal_leader_timeout_successful(round: Round, round_index: int, budget: TransactionBudget, event_sequence: EventSequence) -> List[FeeEvent]:
+def apply_appeal_leader_timeout_successful(transaction_results: TransactionRoundResults, round_index: int, budget: TransactionBudget, event_sequence: EventSequence) -> List[FeeEvent]:
     events = []
     if not budget.appeals or round_index > len(budget.appeals):
         return events

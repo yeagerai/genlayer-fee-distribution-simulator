@@ -1,9 +1,10 @@
 from typing import List
-from fee_simulator.models import Round, TransactionBudget, FeeEvent, EventSequence
+from fee_simulator.models import TransactionRoundResults, TransactionBudget, FeeEvent, EventSequence
 from fee_simulator.core.majority import normalize_vote
 
-def apply_leader_timeout_50_percent(round: Round, round_index: int, budget: TransactionBudget, event_sequence: EventSequence) -> List[FeeEvent]:
+def apply_leader_timeout_50_percent(transaction_results: TransactionRoundResults, round_index: int, budget: TransactionBudget, event_sequence: EventSequence) -> List[FeeEvent]:
     events = []
+    round = transaction_results.rounds[round_index]
     if not round.rotations: # TODO: this is a hack, rotations are not properly implemented
         return events
     votes = round.rotations[-1].votes

@@ -40,6 +40,7 @@ def process_transaction(
     fee_events.append(FeeEvent(
         sequence_id=event_sequence.next_id(),
         address=sender_address,
+        role="SENDER",
         cost=compute_total_cost(transaction_budget),
     ))
 
@@ -75,12 +76,13 @@ def process_transaction(
                     sequence_id=event_sequence.next_id(),
                     round_index=i,
                     round_label=labels[i],
+                    role="APPEALANT",
                     address=appealant_address,
                     cost=bond,
                 ))
 
             round_fee_events = distribute_round(
-                round=round_obj,
+                transaction_results=replace_idle_transaction_results,
                 round_index=i,
                 label=labels[i],
                 budget=transaction_budget,
@@ -92,6 +94,7 @@ def process_transaction(
     fee_events.append(FeeEvent(
         sequence_id=event_sequence.next_id(),
         address=sender_address,
+        role="SENDER",
         earned=refunds,
     ))
 

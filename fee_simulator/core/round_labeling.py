@@ -26,7 +26,6 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
 
     if len(rounds) == 1: # TODO: this is a hack to handle the case where there is only one rotation in the first round, but we need to handle rotations properly
         leader_address = next(iter(rounds[0].keys()))
-        print(leader_address)
         if rounds[0][leader_address] == ["LEADER_TIMEOUT","NA"]:
             labels = ["LEADER_TIMEOUT_50_PERCENT"]
         return labels

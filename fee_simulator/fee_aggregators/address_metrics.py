@@ -47,6 +47,24 @@ def compute_all_zeros(fee_events: List[FeeEvent], address: str) -> bool:
     )
 
 def compute_total_balance(fee_events: List[FeeEvent], address: str) -> float:
-    return (
-        compute_total_earnings(fee_events, address) - compute_total_costs(fee_events, address)
-    )
+    costs = compute_total_costs(fee_events, address)
+    earnings = compute_total_earnings(fee_events, address)
+    return earnings - costs
+
+def compute_txn_costs(fee_events: List[FeeEvent]) -> float:
+    return sum(event.cost for event in fee_events)
+
+def compute_txn_earnings(fee_events: List[FeeEvent]) -> float:
+    return sum(event.earned for event in fee_events)
+
+def compute_txn_burnt(fee_events: List[FeeEvent]) -> float:
+    return sum(event.burned for event in fee_events)
+
+def compute_txn_slashed(fee_events: List[FeeEvent]) -> float:
+    return sum(event.slashed for event in fee_events)
+
+def compute_txn_balance(fee_events: List[FeeEvent]) -> float:
+    return compute_txn_earnings(fee_events) - compute_txn_costs(fee_events)
+
+def compute_txn_appealants_burnt(fee_events: List[FeeEvent]) -> float:
+    return sum(event.burned for event in fee_events if event.role == "APPEALANT")

@@ -1,7 +1,7 @@
 from typing import Callable, Dict, List
 
 from fee_simulator.models import (
-    Round,
+    TransactionRoundResults,
     TransactionBudget,
     FeeEvent,
     EventSequence,
@@ -23,7 +23,7 @@ from fee_simulator.core.round_fee_distribution import (
     apply_leader_timeout_150_previous_normal_round,
 )
 
-FeeTransformer = Callable[[Round, int, TransactionBudget, EventSequence], List[FeeEvent]]
+FeeTransformer = Callable[[TransactionRoundResults, int, TransactionBudget, EventSequence], List[FeeEvent]]
 
 FEE_RULES: Dict[RoundLabel, FeeTransformer] = {
     "NORMAL_ROUND": apply_normal_round,
@@ -42,7 +42,7 @@ FEE_RULES: Dict[RoundLabel, FeeTransformer] = {
 }
 
 def distribute_round(
-    round: Round,
+    transaction_results: TransactionRoundResults,
     round_index: int,
     label: RoundLabel,
     budget: TransactionBudget,
@@ -52,4 +52,4 @@ def distribute_round(
     Distribute fees for a single round based on its label, generating FeeEvent instances.
     """
     transformer = FEE_RULES.get(label, lambda r, i, b, s: [])
-    return transformer(round, round_index, budget, event_sequence)
+    return transformer(transaction_results, round_index, budget, event_sequence)
