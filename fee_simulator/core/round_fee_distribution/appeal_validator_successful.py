@@ -38,7 +38,7 @@ def apply_appeal_validator_successful(transaction_results: TransactionRoundResul
         total_votes = {**votes_this_round, **votes_previous_round}
         majority = compute_majority(total_votes)
         if majority == "UNDETERMINED":
-            leader_address = next(iter(total_votes.keys()), None)
+            leader_address = next(iter(votes_previous_round.keys()), None)
             print(f"leader_address: {leader_address}")
             if leader_address:
                 events.append(FeeEvent(
