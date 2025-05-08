@@ -2,7 +2,7 @@ from typing import List
 from math import floor
 from fee_simulator.models import TransactionRoundResults, TransactionBudget, FeeEvent, EventSequence
 from fee_simulator.core.majority import compute_majority, who_is_in_vote_majority, normalize_vote
-from fee_simulator.core.refunds import compute_unsuccessful_validator_appeal_burn
+from fee_simulator.core.burns import compute_unsuccessful_validator_appeal_burn
 from fee_simulator.constants import PENALTY_REWARD_COEFFICIENT
 
 def apply_appeal_validator_unsuccessful(transaction_results: TransactionRoundResults, round_index: int, budget: TransactionBudget, event_sequence: EventSequence) -> List[FeeEvent]:
