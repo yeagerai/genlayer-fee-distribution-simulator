@@ -139,7 +139,7 @@ This system is useful for:
    python combinatorial_testing.py
 ``` 
 
-2. Create custom scenarios:
+2. Create and run custom scenarios:
     
 ```python
        from custom_types import (
@@ -196,6 +196,20 @@ The system includes robust visualization for:
 - Adding more unit tests
 
 - Expanding documentation
+
+## Running tests
+
+To run a specific test, looking at the print statements (fancy tables) in the test file:
+
+```bash
+pytest tests/folder/test_file.py -s --verbose-output --debug-output
+```
+
+To run all tests, use the following command:
+
+```bash
+pytest 
+```
 
 ## Summary
 
