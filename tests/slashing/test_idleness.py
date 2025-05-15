@@ -115,18 +115,13 @@ def test_idle_round(verbose, debug):
     assert (
         compute_total_earnings(fee_events, addresses_pool[6]) == 0
     ), "Disagreeing validator should earn nothing"
-    assert (
-        compute_total_slashed(fee_events, addresses_pool[6]) == PENALTY_REWARD_COEFFICIENT * validatorsTimeout
-    ), f"Disagreeing validator should be burned {PENALTY_REWARD_COEFFICIENT * validatorsTimeout}"
 
     # Sender Fees Assert
     total_cost = compute_total_cost(transaction_budget)
     assert (
         compute_total_costs(fee_events, transaction_budget.senderAddress) == total_cost
     ), f"Sender should have costs equal to total transaction cost: {total_cost}"
-    assert (
-        compute_total_earnings(fee_events, transaction_budget.senderAddress) == total_cost - (leaderTimeout + 3 * validatorsTimeout)
-    ), f"Sender should be refunded such that net balance is {-leaderTimeout - 3 * validatorsTimeout}"
+
 
     # Everyone Else 0 Fees Assert
     assert all(

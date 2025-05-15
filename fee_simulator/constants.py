@@ -18,7 +18,7 @@ ROUND_SIZES = [
     385,
     767,
     769,
-    1535,
+    1000,
 ]
 
 PENALTY_REWARD_COEFFICIENT = 1

@@ -1,6 +1,8 @@
 import random
 import string
 import hashlib
+from typing import Union
+from decimal import Decimal, ROUND_DOWN
 from typing import List
 from fee_simulator.models import (
     FeeEvent,
@@ -33,18 +35,31 @@ def initialize_constant_stakes(
 
 
 def compute_total_cost(transaction_budget: TransactionBudget) -> int:
-    if transaction_budget.appealRounds == 0:
-        num_rounds = 1
-    else:
-        num_rounds = transaction_budget.appealRounds * 2
-    total_cost = 0
+    max_round_price = 0
+    max_appealant_reward = transaction_budget.appealRounds*transaction_budget.leaderTimeout
+    num_rounds = transaction_budget.appealRounds*2+1
     for i in range(num_rounds):
         if i % 2 == 0:
-            num_rotations = transaction_budget.rotations[i // 2]
+            max_round_price += ROUND_SIZES[i] * (transaction_budget.rotations[i//2]+1) * transaction_budget.validatorsTimeout + transaction_budget.leaderTimeout
         else:
-            num_rotations = 1
-        total_cost += (num_rotations + 1) * (
-            transaction_budget.leaderTimeout
-            + ROUND_SIZES[i] * transaction_budget.validatorsTimeout
-        )
+            max_round_price += ROUND_SIZES[i] * transaction_budget.validatorsTimeout + transaction_budget.leaderTimeout
+    total_cost = max_appealant_reward + max_round_price
     return total_cost
+
+
+def to_wei(value: Union[int, float, str, Decimal], decimals: int = 18) -> int:
+    try:
+        d = Decimal(str(value))
+        return int(d * (10 ** decimals))
+    except (ValueError, TypeError) as e:
+        raise ValueError(f"Cannot convert {value} to Wei: {e}")
+
+def from_wei(value: int, decimals: int = 18) -> Decimal:
+    return Decimal(value) / (10 ** decimals)
+
+def split_amount(amount: int, num_recipients: int, decimals: int = 18) -> int:
+    if num_recipients == 0:
+        raise ValueError("Number of recipients cannot be zero")
+    d_amount = from_wei(amount, decimals)
+    per_recipient = (d_amount / num_recipients).quantize(Decimal('1.'), rounding=ROUND_DOWN)
+    return to_wei(per_recipient, decimals)
