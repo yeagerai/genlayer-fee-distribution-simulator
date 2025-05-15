@@ -13,6 +13,7 @@ from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
     display_summary_table,
+    display_test_description,
 )
 from fee_simulator.fee_aggregators.address_metrics import (
     compute_all_zeros,
@@ -65,6 +66,10 @@ def test_normal_round(verbose, debug):
 
     # Print if verbose
     if verbose:
+        display_test_description(
+            test_name="test_normal_round",
+            test_description="This test verifies the fee distribution for a normal round with all validators agreeing. It sets up a round with a majority agreement, and verifies that the leader earns the leader timeout plus validator timeout, validators earn the validator timeout, and the sender's costs match the total transaction cost."
+        )
         display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
         display_transaction_results(transaction_results, round_labels)
 
@@ -128,6 +133,10 @@ def test_normal_round_with_minority_penalties(verbose, debug):
 
     # Print if verbose
     if verbose:
+        display_test_description(
+            test_name="test_normal_round_with_minority_penalties",
+            test_description="This test verifies the fee distribution for a normal round with penalties for validators in the minority (3 Agree, 1 Disagree, 1 Timeout)."
+        )
         display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
         display_transaction_results(transaction_results, round_labels)
 
@@ -203,6 +212,10 @@ def test_normal_round_no_majority(verbose, debug):
 
     # Print if verbose
     if verbose:
+        display_test_description(
+            test_name="test_normal_round_no_majority",
+            test_description="This test verifies the fee distribution for a normal round with no majority (2 Agree, 2 Disagree, 1 Timeout)."
+        )
         display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
         display_transaction_results(transaction_results, round_labels)
 
@@ -266,6 +279,10 @@ def test_normal_round_no_majority_disagree(verbose, debug):
 
     # Print if verbose
     if verbose:
+        display_test_description(
+            test_name="test_normal_round_no_majority_disagree",
+            test_description="This test verifies the fee distribution for a normal round with no majority (2 Agree, 3 Disagree)."
+        )
         display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
         display_transaction_results(transaction_results, round_labels)
 

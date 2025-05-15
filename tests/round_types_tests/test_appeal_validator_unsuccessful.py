@@ -15,13 +15,13 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_costs,
     compute_total_burnt,
     compute_all_zeros,
-    compute_total_balance,
 )
 from fee_simulator.fee_aggregators.aggregated import compute_agg_costs, compute_agg_earnings
 from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
     display_summary_table,
+    display_test_description,
 )
 
 leaderTimeout = 100
@@ -70,6 +70,10 @@ def test_appeal_validator_unsuccessful(verbose, debug):
 
     # Print if verbose
     if verbose:
+        display_test_description(
+            test_name="test_appeal_validator_unsuccessful",
+            test_description="This test checks the fee distribution for an unsuccessful validator appeal. It simulates a normal round with an undetermined outcome followed by an appeal round where validators vote in majority agreement. The test verifies that the appealant incurs the appeal bond cost with no earnings, the first leader earns both leader and validator timeouts, the second leader and majority validators earn validator timeouts, minority validators are penalized, and the sender's costs match the transaction cost."
+        )
         display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
         display_transaction_results(transaction_results, round_labels)
 

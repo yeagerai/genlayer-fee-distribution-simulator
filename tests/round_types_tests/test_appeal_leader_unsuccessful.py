@@ -13,15 +13,14 @@ from fee_simulator.constants import PENALTY_REWARD_COEFFICIENT
 from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_earnings,
     compute_total_costs,
-    compute_total_burnt,
     compute_all_zeros,
-    compute_total_balance,
 )
 from fee_simulator.fee_aggregators.aggregated import compute_agg_costs, compute_agg_earnings
 from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
     display_summary_table,
+    display_test_description,
 )
 
 leaderTimeout = 100
@@ -86,6 +85,10 @@ def test_appeal_leader_unsuccessful(verbose, debug):
 
     # Print if verbose
     if verbose:
+        display_test_description(
+            test_name="test_appeal_leader_unsuccessful",
+            test_description="This test validates the fee distribution when a leader appeal is unsuccessful. It sets up a normal round with an undetermined outcome, an appeal round, and a subsequent normal round with no majority. The test ensures the appealant incurs the appeal bond cost without earnings, the first leader and validators earn their timeouts, the second leader and validators share the appeal bond, minority validators are not penalized due to no majority, and the sender's costs are correct."
+        )
         display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
         display_transaction_results(transaction_results, round_labels)
 

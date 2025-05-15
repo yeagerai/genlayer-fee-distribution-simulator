@@ -22,6 +22,7 @@ from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
     display_summary_table,
+    display_test_description,
 )
 
 leaderTimeout = 100
@@ -86,6 +87,10 @@ def test_appeal_validator_successful(verbose, debug):
 
     # Print if verbose
     if verbose:
+        display_test_description(
+            test_name="test_appeal_validator_successful",
+            test_description="This test evaluates the fee distribution for a successful validator appeal. It involves a normal round with an undetermined outcome, an appeal round with validator votes, and a normal round with a majority agreement. The test confirms that the appealant earns the appeal bond plus the leader timeout, the first and second leaders earn their timeouts, majority validators earn double timeouts due to participation in multiple rounds, minority validators are penalized, and the sender's costs align with the transaction cost."
+        )
         display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
         display_transaction_results(transaction_results, round_labels)
 

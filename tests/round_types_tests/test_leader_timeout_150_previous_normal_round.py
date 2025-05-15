@@ -21,6 +21,7 @@ from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
     display_summary_table,
+    display_test_description,
 )
 
 leaderTimeout = 100
@@ -85,6 +86,10 @@ def test_leader_timeout_150_previous_normal_round(verbose, debug):
 
     # Print if verbose
     if verbose:
+        display_test_description(
+            test_name="test_leader_timeout_150_previous_normal_round",
+            test_description="This test assesses the fee distribution for a leader timeout scenario followed by a successful appeal and a normal round, labeled as LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND. It involves a leader timeout round, an appeal round, and a normal round with a majority agreement. The test ensures the appealant earns the appeal bond plus half the leader timeout, the second leader earns 150% of the leader timeout plus validator timeout, majority validators earn validator timeouts, minority validators are penalized, and the sender's costs are correct."
+        )
         display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
         display_transaction_results(transaction_results, round_labels)
 

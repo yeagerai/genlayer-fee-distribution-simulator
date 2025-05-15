@@ -131,3 +131,11 @@ def get_vote_summary(votes: Dict[str, Vote]) -> List[List[str]]:
         for vote_type, count in vote_counts.items()
         if count > 0
     ]
+
+def display_test_description(test_name: str, test_description: str) -> None:
+    print("\n\n\n\n\n\n\n\n")
+    print(f"{Colors.CYAN}{'====' * 20}{Colors.ENDC}")
+    print(f"\n{Colors.BOLD}{Colors.CYAN}=== TEST DESCRIPTION ==={Colors.ENDC}")
+    print(f"{Colors.BOLD}Test:{Colors.ENDC} {test_name}")
+    print(f"{Colors.BOLD}Description:{Colors.ENDC} {test_description}\n")
+    print(f"{Colors.CYAN}{'====' * 20}{Colors.ENDC}")
