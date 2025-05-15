@@ -21,6 +21,7 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_burnt,
     compute_total_balance,
 )
+from fee_simulator.fee_aggregators.aggregated import compute_agg_costs, compute_agg_earnings
 from fee_simulator.constants import PENALTY_REWARD_COEFFICIENT
 
 leaderTimeout = 100
@@ -100,6 +101,8 @@ def test_normal_round(verbose, debug):
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"
 
+    assert compute_agg_costs(fee_events) == compute_agg_earnings(fee_events), "Total costs should be equal to total earnings"
+
 def test_normal_round_with_minority_penalties(verbose, debug):
     """Test normal round with penalties for validators in the minority (3 Agree, 1 Disagree, 1 Timeout)."""
     # Setup
@@ -174,7 +177,7 @@ def test_normal_round_with_minority_penalties(verbose, debug):
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"
 
-
+    assert compute_agg_costs(fee_events) == compute_agg_earnings(fee_events), "Total costs should be equal to total earnings"
 def test_normal_round_no_majority(verbose, debug):
     """Test normal round with no majority (2 Agree, 2 Disagree, 1 Timeout)."""
     # Setup
@@ -236,6 +239,8 @@ def test_normal_round_no_majority(verbose, debug):
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"
 
+    assert compute_agg_costs(fee_events) == compute_agg_earnings(fee_events), "Total costs should be equal to total earnings"
+
 def test_normal_round_no_majority_disagree(verbose, debug):
     """Test normal round with no majority (2 Agree, 3 Disagree)."""
     # Setup
@@ -296,3 +301,5 @@ def test_normal_round_no_majority_disagree(verbose, debug):
         for i in range(len(addresses_pool))
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"
+
+    assert compute_agg_costs(fee_events) == compute_agg_earnings(fee_events), "Total costs should be equal to total earnings"

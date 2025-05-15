@@ -16,6 +16,7 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_burnt,
     compute_all_zeros,
 )
+from fee_simulator.fee_aggregators.aggregated import compute_agg_costs, compute_agg_earnings
 from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
@@ -143,3 +144,5 @@ def test_leader_timeout_150_previous_normal_round(verbose, debug):
     assert (
         compute_total_costs(fee_events, transaction_budget.senderAddress) == total_cost
     ), f"Sender should have costs equal to total transaction cost: {total_cost}"
+
+    assert compute_agg_costs(fee_events) == compute_agg_earnings(fee_events), "Total costs should be equal to total earnings"

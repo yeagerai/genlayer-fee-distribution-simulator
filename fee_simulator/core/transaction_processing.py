@@ -90,7 +90,7 @@ def process_transaction(
             )
             fee_events.extend(round_fee_events)
 
-    refunds = compute_sender_refund(sender_address, fee_events)
+    refunds = compute_sender_refund(sender_address, fee_events, transaction_budget)
     fee_events.append(FeeEvent(
         sequence_id=event_sequence.next_id(),
         address=sender_address,

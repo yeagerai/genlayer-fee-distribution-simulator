@@ -17,6 +17,7 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_all_zeros,
     compute_total_balance,
 )
+from fee_simulator.fee_aggregators.aggregated import compute_agg_costs, compute_agg_earnings
 from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
@@ -146,3 +147,5 @@ def test_appeal_leader_successful(verbose):
     assert (
         compute_total_balance(fee_events, transaction_budget.senderAddress) == -1 * leaderTimeout - 6 * validatorsTimeout
     ), f"Sender balance should reflect costs minus refunds: {-1 * leaderTimeout - 6 * validatorsTimeout}"
+
+    assert compute_agg_costs(fee_events) == compute_agg_earnings(fee_events), "Total costs should be equal to total earnings"
