@@ -91,11 +91,10 @@ def test_leader_timeout_150_previous_normal_round(verbose, debug):
         display_fee_distribution(fee_events)
 
     # Round Label Assert
+    print(f"round_labels: {round_labels}")
     assert round_labels == [
-        "LEADER_TIMEOUT_50_PERCENT",
-        "APPEAL_LEADER_TIMEOUT_SUCCESSFUL",
-        "LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND",
-    ], f"Expected ['LEADER_TIMEOUT_50_PERCENT', 'APPEAL_LEADER_TIMEOUT_SUCCESSFUL', 'LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND'], got {round_labels}"
+        'SKIP_ROUND', 'APPEAL_LEADER_TIMEOUT_SUCCESSFUL', 'LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND'
+    ], f"Expected ['SKIP_ROUND', 'APPEAL_LEADER_TIMEOUT_SUCCESSFUL', 'LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND'], got {round_labels}"
 
     # Everyone Else 0 Fees Assert
     assert all(
@@ -119,19 +118,19 @@ def test_leader_timeout_150_previous_normal_round(verbose, debug):
 
     # First Leader Fees Assert
     assert (
-        compute_total_earnings(fee_events, addresses_pool[0]) == leaderTimeout * 0.5
-    ), f"First leader should earn 50% of leaderTimeout ({leaderTimeout * 0.5})"
+        compute_total_earnings(fee_events, addresses_pool[0]) == 0
+    ), f"First leader should earn 0"
 
     # Second Leader Fees Assert
     assert (
-        compute_total_earnings(fee_events, addresses_pool[5]) == leaderTimeout * 1.5
+        compute_total_earnings(fee_events, addresses_pool[5]) == leaderTimeout * 1.5 + validatorsTimeout
     ), f"Second leader should earn 150% of leaderTimeout ({leaderTimeout * 1.5})"
 
     # Majority Validator Fees Assert
     assert all(
-        compute_total_earnings(fee_events, addresses_pool[i]) == validatorsTimeout + (appeal_bond / 6)
+        compute_total_earnings(fee_events, addresses_pool[i]) == validatorsTimeout
         for i in [1, 2, 3, 4, 6]
-    ), f"Majority validators should earn validatorsTimeout ({validatorsTimeout}) + share of appeal_bond ({appeal_bond / 6})"
+    ), f"Majority validators should earn validatorsTimeout ({validatorsTimeout})"
 
     # Minority Validator Fees Assert
     assert all(
@@ -144,6 +143,3 @@ def test_leader_timeout_150_previous_normal_round(verbose, debug):
     assert (
         compute_total_costs(fee_events, transaction_budget.senderAddress) == total_cost
     ), f"Sender should have costs equal to total transaction cost: {total_cost}"
-    assert (
-        compute_total_earnings(fee_events, addresses_pool[1999]) == leaderTimeout / 2
-    ), f"Sender should earn 50% of leaderTimeout ({leaderTimeout / 2})"

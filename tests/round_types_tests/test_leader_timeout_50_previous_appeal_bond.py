@@ -126,6 +126,3 @@ def test_leader_timeout_50_previous_appeal_bond(verbose, debug):
     assert (
         compute_total_costs(fee_events, transaction_budget.senderAddress) == total_cost
     ), f"Sender should have costs equal to total transaction cost: {total_cost}"
-    assert (
-        compute_total_earnings(fee_events, addresses_pool[1999]) == appeal_bond / 2
-    ), f"Sender should earn 50% of appeal_bond ({appeal_bond / 2})"

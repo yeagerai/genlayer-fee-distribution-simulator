@@ -3,7 +3,7 @@ from fee_simulator.models import TransactionRoundResults, TransactionBudget, Fee
 from fee_simulator.core.majority import compute_majority, who_is_in_vote_majority, normalize_vote
 from fee_simulator.core.bond_computing import compute_appeal_bond
 from fee_simulator.constants import PENALTY_REWARD_COEFFICIENT
-
+from fee_simulator.utils import split_amount
 def apply_leader_timeout_150_previous_normal_round(transaction_results: TransactionRoundResults, round_index: int, budget: TransactionBudget, event_sequence: EventSequence) -> List[FeeEvent]:
     events = []
     round = transaction_results.rounds[round_index]
@@ -68,7 +68,7 @@ def apply_leader_timeout_150_previous_normal_round(transaction_results: Transact
             hash="0xdefault",
             cost=0,
             staked=0,
-            earned=budget.validatorsTimeout + (appeal_bond / len(majority_addresses) if majority_addresses else 0),
+            earned=budget.validatorsTimeout + split_amount(appeal_bond, len(majority_addresses)),
             slashed=0,
             burned=0
         ))

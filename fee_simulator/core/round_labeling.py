@@ -1,16 +1,7 @@
 from typing import List
-
-from fee_simulator.models import (
-    TransactionRoundResults,
- )
-
-from fee_simulator.types import (
-    RoundLabel,
-)
-
-from fee_simulator.core.majority import (
-    compute_majority,
-)
+from fee_simulator.models import TransactionRoundResults
+from fee_simulator.types import RoundLabel
+from fee_simulator.core.majority import compute_majority
 
 def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabel]:
     # Extract rounds for processing
@@ -22,13 +13,15 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
         else:
             rounds.append({})
 
+    leader_addresses = []
+    for i, round in enumerate(rounds):
+        leader_addresses.append(next(iter(round.keys())))
     labels = ["NORMAL_ROUND"]
-
-    if len(rounds) == 1: # TODO: this is a hack to handle the case where there is only one rotation in the first round, but we need to handle rotations properly
-        leader_address = next(iter(rounds[0].keys()))
-        if rounds[0][leader_address] == ["LEADER_TIMEOUT","NA"]:
+    if rounds[0][leader_addresses[0]] == ["LEADER_TIMEOUT","NA"]:
+        labels = ["LEADER_TIMEOUT"]
+        if len(rounds) == 1:
             labels = ["LEADER_TIMEOUT_50_PERCENT"]
-        return labels
+            return labels
 
     for i, round in enumerate(rounds):
         if i == 0:
@@ -37,29 +30,33 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
             labels.append("EMPTY_ROUND")
         if i % 2 == 1:
             if (
-                len(rounds[i - 1]) == 1
+                rounds[i - 1][leader_addresses[i-1]] == ["LEADER_TIMEOUT","NA"]
                 and i + 1 < len(rounds)
-                and len(rounds[i + 1]) == 1
+                and rounds[i + 1][leader_addresses[i+1]] == ["LEADER_TIMEOUT","NA"]
             ):
                 labels.append("APPEAL_LEADER_TIMEOUT_UNSUCCESSFUL")
+                continue
             if (
-                len(rounds[i - 1]) == 1
+                rounds[i - 1][leader_addresses[i-1]] == ["LEADER_TIMEOUT","NA"]
                 and i + 1 < len(rounds)
-                and len(rounds[i + 1]) > 1
+                and rounds[i + 1][leader_addresses[i+1]][0] == "LEADER_RECEIPT"
             ):
                 labels.append("APPEAL_LEADER_TIMEOUT_SUCCESSFUL")
+                continue
             if (
                 compute_majority(rounds[i - 1]) == "UNDETERMINED"
                 and i + 1 < len(rounds)
                 and compute_majority(rounds[i + 1]) != "UNDETERMINED"
             ):
                 labels.append("APPEAL_LEADER_SUCCESSFUL")
+                continue
             if (
                 compute_majority(rounds[i - 1]) == "UNDETERMINED"
                 and i + 1 < len(rounds)
                 and compute_majority(rounds[i + 1]) == "UNDETERMINED"
             ):
                 labels.append("APPEAL_LEADER_UNSUCCESSFUL")
+                continue
 
             empty_candidate = i - 1
             while (
@@ -73,14 +70,18 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
                     rounds[empty_candidate]
                 ):
                     labels.append("APPEAL_VALIDATOR_SUCCESSFUL")
+                    continue
                 else:
                     labels.append("APPEAL_VALIDATOR_UNSUCCESSFUL")
+                    continue
         else:
-            if "LEADER_TIMEOUT" in round:
+            if rounds[i][leader_addresses[i]] == ["LEADER_TIMEOUT","NA"]:
                 labels.append("LEADER_TIMEOUT")
+                continue
             else:
                 labels.append("NORMAL_ROUND")
-
+                continue
+    print(f"labels: {labels}")
     # Handle special cases with the reversed list
     reverse_labels = labels[::-1]
     reverse_rounds = rounds[::-1]
@@ -90,14 +91,27 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
             if (
                 reverse_labels[i] == "NORMAL_ROUND"
                 and i + 1 < len(reverse_labels)
+                and "APPEAL_LEADER_TIMEOUT_SUCCESSFUL" == reverse_labels[i + 1]
+                and i + 2 < len(reverse_labels)
+                and reverse_labels[i + 2] == "LEADER_TIMEOUT"
+            ):
+                print("I'M HERE")
+                reverse_labels[i] = "LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND"
+                reverse_labels[i + 2] = "SKIP_ROUND"
+                continue
+            if (
+                reverse_labels[i] == "NORMAL_ROUND"
+                and i + 1 < len(reverse_labels)
                 and "APPEAL" in reverse_labels[i + 1]
                 and i + 2 < len(reverse_rounds)
                 and compute_majority(reverse_rounds[i + 2]) == "UNDETERMINED"
             ):
                 if "UNSUCCESSFUL" in reverse_labels[i + 1]:
                     reverse_labels[i] = "SPLIT_PREVIOUS_APPEAL_BOND"
+                    continue
                 else:
                     reverse_labels[i + 2] = "SKIP_ROUND"
+                    continue
 
             if (
                 i < len(labels)
@@ -109,19 +123,11 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
             ):
                 reverse_labels[i] = "LEADER_TIMEOUT_50_PREVIOUS_APPEAL_BOND"
                 reverse_labels[i + 2] = "LEADER_TIMEOUT_50_PERCENT"
-
-            if (
-                reverse_labels[i] == "NORMAL_ROUND"
-                and i + 1 < len(reverse_labels)
-                and "APPEAL_LEADER_TIMEOUT_SUCCESSFUL" == reverse_labels[i + 1]
-                and i + 2 < len(reverse_labels)
-                and reverse_labels[i + 2] == "LEADER_TIMEOUT"
-            ):
-                reverse_labels[i] = "LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND"
-                reverse_labels[i + 2] = "SKIP_ROUND"
-
+                continue
         if i+1 < len(reverse_labels):
             if reverse_labels[i] == "APPEAL_VALIDATOR_SUCCESSFUL" and reverse_labels[i-1] == "NORMAL_ROUND":
                 reverse_labels[i+1] = "SKIP_ROUND"
+                continue
 
-    return reverse_labels[::-1]
+    labels = reverse_labels[::-1]
+    return labels
