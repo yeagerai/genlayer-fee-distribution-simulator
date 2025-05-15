@@ -13,6 +13,8 @@ def compute_sender_refund(sender_address: str, fee_events: List[FeeEvent], trans
         round_label = event.round_label if event.round_label is not None else ""
         round_index = event.round_index
         if event.role == "APPEALANT":
+            if event.earned > 0:
+                total_paid_from_sender+=transaction_budget.leaderTimeout
             continue
         if "UNSUCCESSFUL" in round_label: 
             continue

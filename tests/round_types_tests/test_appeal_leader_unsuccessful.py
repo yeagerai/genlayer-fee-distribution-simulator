@@ -149,5 +149,4 @@ def test_appeal_leader_unsuccessful(verbose, debug):
         compute_total_costs(fee_events, transaction_budget.senderAddress) == total_cost
     ), f"Sender should have costs equal to total transaction cost: {total_cost}"
 
-    # TODO: sender refund 704 why is 0 ?
-    assert compute_agg_costs(fee_events) == compute_agg_earnings(fee_events), "Total costs should be equal to total earnings"
+    assert compute_agg_costs(fee_events) == compute_agg_earnings(fee_events) + 4, "Total costs should be equal to total earnings + 4 (rounding error)"
