@@ -24,6 +24,7 @@ from fee_simulator.fee_aggregators.address_metrics import (
 )
 from fee_simulator.fee_aggregators.aggregated import compute_agg_costs, compute_agg_earnings
 from fee_simulator.constants import PENALTY_REWARD_COEFFICIENT
+from tests.invariant_checks import check_invariants
 
 leaderTimeout = 100
 validatorsTimeout = 200
@@ -76,6 +77,9 @@ def test_normal_round(verbose, debug):
     if debug:
         display_fee_distribution(fee_events)
 
+    # Invariant Check
+    check_invariants(fee_events, transaction_budget, transaction_results)
+
     # Round Label Assert
     assert round_labels == [
         "NORMAL_ROUND"
@@ -106,7 +110,6 @@ def test_normal_round(verbose, debug):
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"
 
-    assert compute_agg_costs(fee_events) == compute_agg_earnings(fee_events), "Total costs should be equal to total earnings"
 
 def test_normal_round_with_minority_penalties(verbose, debug):
     """Test normal round with penalties for validators in the minority (3 Agree, 1 Disagree, 1 Timeout)."""
@@ -143,6 +146,9 @@ def test_normal_round_with_minority_penalties(verbose, debug):
     if debug:
         display_fee_distribution(fee_events)
    
+    # Invariant Check
+    check_invariants(fee_events, transaction_budget, transaction_results)
+
     # Round Label Assert
     assert round_labels == [
         "NORMAL_ROUND"
@@ -186,7 +192,6 @@ def test_normal_round_with_minority_penalties(verbose, debug):
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"
 
-    assert compute_agg_costs(fee_events) == compute_agg_earnings(fee_events), "Total costs should be equal to total earnings"
 def test_normal_round_no_majority(verbose, debug):
     """Test normal round with no majority (2 Agree, 2 Disagree, 1 Timeout)."""
     # Setup
@@ -222,6 +227,9 @@ def test_normal_round_no_majority(verbose, debug):
     if debug:
         display_fee_distribution(fee_events)
 
+    # Invariant Check
+    check_invariants(fee_events, transaction_budget, transaction_results)
+
     # Round Label Assert
     assert round_labels == [
         "NORMAL_ROUND"
@@ -252,7 +260,6 @@ def test_normal_round_no_majority(verbose, debug):
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"
 
-    assert compute_agg_costs(fee_events) == compute_agg_earnings(fee_events), "Total costs should be equal to total earnings"
 
 def test_normal_round_no_majority_disagree(verbose, debug):
     """Test normal round with no majority (2 Agree, 3 Disagree)."""
@@ -289,6 +296,9 @@ def test_normal_round_no_majority_disagree(verbose, debug):
     if debug:
         display_fee_distribution(fee_events)
 
+    # Invariant Check
+    check_invariants(fee_events, transaction_budget, transaction_results)
+
     # Round Label Assert
     assert round_labels == [
         "NORMAL_ROUND"
@@ -318,5 +328,3 @@ def test_normal_round_no_majority_disagree(verbose, debug):
         for i in range(len(addresses_pool))
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"
-
-    assert compute_agg_costs(fee_events) == compute_agg_earnings(fee_events), "Total costs should be equal to total earnings"

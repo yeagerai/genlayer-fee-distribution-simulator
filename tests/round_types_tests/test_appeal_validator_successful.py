@@ -15,7 +15,6 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_costs,
     compute_total_burnt,
     compute_all_zeros,
-    compute_total_balance,
 )
 from fee_simulator.fee_aggregators.aggregated import compute_agg_costs, compute_agg_earnings
 from fee_simulator.display import (
@@ -24,6 +23,7 @@ from fee_simulator.display import (
     display_summary_table,
     display_test_description,
 )
+from tests.invariant_checks import check_invariants
 
 leaderTimeout = 100
 validatorsTimeout = 200
@@ -97,6 +97,9 @@ def test_appeal_validator_successful(verbose, debug):
     if debug:
         display_fee_distribution(fee_events)
 
+    # Invariant Check
+    check_invariants(fee_events, transaction_budget, transaction_results)
+
     # Round Label Assert
     assert round_labels == [
         "SKIP_ROUND",
@@ -150,5 +153,3 @@ def test_appeal_validator_successful(verbose, debug):
     assert (
         compute_total_costs(fee_events, transaction_budget.senderAddress) == total_cost
     ), f"Sender should have costs equal to total transaction cost: {total_cost}"
-    # TODO: refunds are not working
-    assert compute_agg_costs(fee_events) == compute_agg_earnings(fee_events), "Total costs should be equal to total earnings"

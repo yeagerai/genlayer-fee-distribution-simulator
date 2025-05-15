@@ -23,7 +23,7 @@ from fee_simulator.display import (
     display_summary_table,
     display_test_description,
 )
-
+from tests.invariant_checks import check_invariants
 leaderTimeout = 100
 validatorsTimeout = 200
 
@@ -98,6 +98,9 @@ def test_appeal_leader_successful(verbose):
         display_transaction_results(transaction_results, round_labels)
         display_fee_distribution(fee_events)
 
+    # Invariant Check
+    check_invariants(fee_events, transaction_budget, transaction_results)
+
     # Round Label Assert
     assert round_labels == [
         "SKIP_ROUND",
@@ -148,6 +151,3 @@ def test_appeal_leader_successful(verbose):
     assert (
         compute_total_costs(fee_events, transaction_budget.senderAddress) == total_cost
     ), f"Sender should have costs equal to total transaction cost: {total_cost}"
-
-
-    assert compute_agg_costs(fee_events) == compute_agg_earnings(fee_events), "Total costs should be equal to total earnings"

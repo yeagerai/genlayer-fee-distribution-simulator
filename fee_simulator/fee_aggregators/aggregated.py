@@ -7,3 +7,5 @@ def compute_agg_costs(fee_events: List[FeeEvent]) -> float:
 def compute_agg_earnings(fee_events: List[FeeEvent]) -> float:
     return sum(event.earned for event in fee_events)
 
+def compute_agg_burnt(fee_events: List[FeeEvent]) -> float:
+    return sum(event.burned for event in fee_events)

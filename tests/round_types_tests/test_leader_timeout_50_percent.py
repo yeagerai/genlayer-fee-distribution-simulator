@@ -19,7 +19,7 @@ from fee_simulator.display import (
     display_summary_table,
     display_test_description,
 )
-
+from tests.invariant_checks import check_invariants
 leaderTimeout = 100
 validatorsTimeout = 200
 
@@ -69,6 +69,9 @@ def test_leader_timeout_50_percent(verbose, debug):
     if debug:
         display_fee_distribution(fee_events)
 
+    # Invariant Check
+    check_invariants(fee_events, transaction_budget, transaction_results)
+
     # Round Label Assert
     assert round_labels == [
         "LEADER_TIMEOUT_50_PERCENT"
@@ -92,4 +95,3 @@ def test_leader_timeout_50_percent(verbose, debug):
         compute_total_costs(fee_events, transaction_budget.senderAddress) == total_cost
     ), f"Sender should have costs equal to total transaction cost: {total_cost}"
 
-    assert compute_agg_costs(fee_events) == compute_agg_earnings(fee_events), "Total costs should be equal to total earnings"
