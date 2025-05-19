@@ -27,6 +27,7 @@ def compute_sender_refund(sender_address: str, fee_events: List[FeeEvent], trans
         total_paid_from_sender += event.earned
         if event.address == sender_address:
             sender_cost += event.cost
+            total_paid_from_sender += event.earned
 
     refund = sender_cost - total_paid_from_sender
     if refund < 0:

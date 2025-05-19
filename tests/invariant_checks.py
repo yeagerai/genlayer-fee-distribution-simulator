@@ -1,11 +1,12 @@
 from fee_simulator.models import FeeEvent, TransactionBudget, TransactionRoundResults
-from fee_simulator.fee_aggregators.aggregated import compute_agg_costs, compute_agg_earnings, compute_agg_burnt
+from fee_simulator.fee_aggregators.aggregated import compute_agg_costs, compute_agg_earnings, compute_agg_burnt, compute_agg_appealant_burnt
 from fee_simulator.fee_aggregators.address_metrics import compute_total_costs, compute_total_earnings
 from typing import List
 import itertools
 
 def check_costs_equal_earnings(fee_events: List[FeeEvent], tolerance: int = 5) -> None:
-    assert abs(compute_agg_costs(fee_events) - compute_agg_earnings(fee_events)) < tolerance
+    appealant_burnt = compute_agg_appealant_burnt(fee_events)
+    assert abs(compute_agg_costs(fee_events) - compute_agg_earnings(fee_events) - appealant_burnt) < tolerance
 
 def check_party_safety(fee_events: List[FeeEvent], party: List[str]) -> None:
     party_acc_costs = 0

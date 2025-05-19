@@ -9,3 +9,6 @@ def compute_agg_earnings(fee_events: List[FeeEvent]) -> float:
 
 def compute_agg_burnt(fee_events: List[FeeEvent]) -> float:
     return sum(event.burned for event in fee_events)
+
+def compute_agg_appealant_burnt(fee_events: List[FeeEvent]) -> float:
+    return sum(event.burned for event in fee_events if event.role == "APPEALANT")

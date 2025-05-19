@@ -19,7 +19,7 @@ def apply_appeal_validator_unsuccessful(transaction_results: TransactionRoundRes
                 sequence_id=event_sequence.next_id(),
                 address=addr,
                 round_index=round_index,
-                round_label="APPEAL_VALIDATOR_SUCCESSFUL",
+                round_label="APPEAL_VALIDATOR_UNSUCCESSFUL",
                 role="VALIDATOR",
                 vote=normalize_vote(votes[addr]),
                 hash="0xdefault",
@@ -34,7 +34,7 @@ def apply_appeal_validator_unsuccessful(transaction_results: TransactionRoundRes
                 sequence_id=event_sequence.next_id(),
                 address=addr,
                 round_index=round_index,
-                round_label="APPEAL_VALIDATOR_SUCCESSFUL",
+                round_label="APPEAL_VALIDATOR_UNSUCCESSFUL",
                 role="VALIDATOR",
                 vote=normalize_vote(votes[addr]),
                 hash="0xdefault",
@@ -44,7 +44,7 @@ def apply_appeal_validator_unsuccessful(transaction_results: TransactionRoundRes
                 slashed=0,
                 burned=PENALTY_REWARD_COEFFICIENT * budget.validatorsTimeout,
             ))
-    total_to_burn = compute_unsuccessful_validator_appeal_burn(round_index, appealant_address, events)
+    total_to_burn = compute_unsuccessful_validator_appeal_burn(round_index, budget.leaderTimeout, budget.validatorsTimeout, events)
     events.append(FeeEvent(
         sequence_id=event_sequence.next_id(),
         address=appealant_address,
