@@ -46,12 +46,16 @@ def check_no_free_burn(fee_events: List[FeeEvent]) -> None:
 def all_parties_to_check(
     transaction_results: TransactionRoundResults, max_n_vals: int = 3
 ) -> List[List[str]]:
-    all_validator_addresses = [
-        addr
-        for round in transaction_results.rounds
-        for rotation in round.rotations
-        for addr in rotation.votes.keys()
-    ]
+    all_validator_addresses = list(
+        set(
+            [
+                addr
+                for round in transaction_results.rounds
+                for rotation in round.rotations
+                for addr in rotation.votes.keys()
+            ]
+        )
+    )
     all_validators_combinations = []
     for i in range(
         1, min(len(all_validator_addresses), max_n_vals)

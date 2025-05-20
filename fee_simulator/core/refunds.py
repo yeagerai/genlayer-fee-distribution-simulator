@@ -1,6 +1,7 @@
 from typing import List
 from fee_simulator.models import FeeEvent, TransactionBudget
 from fee_simulator.display.fee_distribution import display_fee_distribution
+from fee_simulator.core.bond_computing import compute_appeal_bond
 
 
 def compute_sender_refund(
@@ -16,21 +17,25 @@ def compute_sender_refund(
         round_label = event.round_label if event.round_label is not None else ""
         if event.role == "APPEALANT":
             if event.earned > 0:
-                total_paid_from_sender += transaction_budget.leaderTimeout
+                appeal_bond = compute_appeal_bond(
+                    normal_round_index=event.round_index - 1,
+                    leader_timeout=transaction_budget.leaderTimeout,
+                    validators_timeout=transaction_budget.validatorsTimeout,
+                )
+                total_paid_from_sender += event.earned - appeal_bond
             continue
         if "UNSUCCESSFUL" in round_label:
             continue
-        if round_label == "SPLIT_PREVIOUS_APPEAL_BOND":
-            if event.role == "VALIDATOR":
-                total_paid_from_sender += transaction_budget.validatorsTimeout
-                continue
-            if event.role == "LEADER":
-                total_paid_from_sender += transaction_budget.leaderTimeout
-                continue
-        total_paid_from_sender += event.earned
+        if (
+            round_label == "SPLIT_PREVIOUS_APPEAL_BOND"
+            or round_label == "LEADER_TIMEOUT_50_PREVIOUS_APPEAL_BOND"
+        ):
+            continue
         if event.address == sender_address:
             sender_cost += event.cost
             total_paid_from_sender += event.earned
+            continue
+        total_paid_from_sender += event.earned
     refund = sender_cost - total_paid_from_sender
     if refund < 0:
         display_fee_distribution(fee_events)

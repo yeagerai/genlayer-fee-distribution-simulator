@@ -15,10 +15,6 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_costs,
     compute_all_zeros,
 )
-from fee_simulator.fee_aggregators.aggregated import (
-    compute_agg_costs,
-    compute_agg_earnings,
-)
 from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
@@ -125,7 +121,9 @@ def test_appeal_leader_unsuccessful(verbose, debug):
         leader_timeout=leaderTimeout,
         validators_timeout=validatorsTimeout,
     )
-    undet_split_amount = (appeal_bond * 10**18 // len(rotation3.votes)) // 10**18
+    undet_split_amount = (
+        (appeal_bond - leaderTimeout) * 10**18 // len(rotation3.votes)
+    ) // 10**18
     assert (
         compute_total_costs(fee_events, addresses_pool[23]) == appeal_bond
     ), f"Appealant should have cost equal to appeal_bond ({appeal_bond})"
@@ -142,22 +140,21 @@ def test_appeal_leader_unsuccessful(verbose, debug):
     # First Validator Fees Assert
     assert all(
         compute_total_earnings(fee_events, addresses_pool[i])
-        == 2 * validatorsTimeout + undet_split_amount
+        == validatorsTimeout + undet_split_amount
         for i in [1, 2, 3, 4]
     ), f"First validators should earn 2*validatorsTimeout ({2*validatorsTimeout}) + undet_split_amount ({undet_split_amount})"
 
     # Second Leader Fees Assert
     assert (
         compute_total_earnings(fee_events, addresses_pool[5])
-        == leaderTimeout + validatorsTimeout + undet_split_amount
-    ), f"Second leader should earn leaderTimeout ({leaderTimeout}) + validatorsTimeout ({validatorsTimeout}) + undet_split_amount ({undet_split_amount})"
+        == leaderTimeout + undet_split_amount
+    ), f"Second leader should earn leaderTimeout ({leaderTimeout}) + undet_split_amount ({undet_split_amount})"
 
     # Second Validator Fees Assert
     assert all(
-        compute_total_earnings(fee_events, addresses_pool[i])
-        == validatorsTimeout + undet_split_amount
+        compute_total_earnings(fee_events, addresses_pool[i]) == undet_split_amount
         for i in [6, 7, 8, 9, 10, 11]
-    ), f"Second validators should earn validatorsTimeout ({validatorsTimeout}) + undet_split_amount ({undet_split_amount})"
+    ), f"Second validators should earn undet_split_amount ({undet_split_amount})"
 
     # Sender Fees Assert
     total_cost = compute_total_cost(transaction_budget)
