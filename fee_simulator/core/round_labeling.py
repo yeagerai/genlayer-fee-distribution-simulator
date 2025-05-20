@@ -45,16 +45,16 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
                 labels.append("APPEAL_LEADER_TIMEOUT_SUCCESSFUL")
                 continue
             if (
-                compute_majority(rounds[i - 1]) == "UNDETERMINED"
+                compute_majority(rounds[i - 1]) in ["UNDETERMINED", "DISAGREE"]
                 and i + 1 < len(rounds)
-                and compute_majority(rounds[i + 1]) != "UNDETERMINED"
+                and compute_majority(rounds[i + 1]) not in ["UNDETERMINED", "DISAGREE"]
             ):
                 labels.append("APPEAL_LEADER_SUCCESSFUL")
                 continue
             if (
-                compute_majority(rounds[i - 1]) == "UNDETERMINED"
+                compute_majority(rounds[i - 1]) in ["UNDETERMINED", "DISAGREE"]
                 and i + 1 < len(rounds)
-                and compute_majority(rounds[i + 1]) == "UNDETERMINED"
+                and compute_majority(rounds[i + 1]) in ["UNDETERMINED", "DISAGREE"]
             ):
                 labels.append("APPEAL_LEADER_UNSUCCESSFUL")
                 continue
@@ -63,10 +63,17 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
             while (
                 empty_candidate >= 0
                 and rounds[empty_candidate] == "EMPTY_ROUND"
-                and compute_majority(rounds[empty_candidate]) != "UNDETERMINED"
+                and compute_majority(rounds[empty_candidate])
+                not in [
+                    "UNDETERMINED",
+                    "DISAGREE",
+                ]
             ):
                 empty_candidate -= 2
-            if compute_majority(rounds[empty_candidate]) != "UNDETERMINED":
+            if compute_majority(rounds[empty_candidate]) not in [
+                "UNDETERMINED",
+                "DISAGREE",
+            ]:
                 if empty_candidate >= 0 and compute_majority(round) != compute_majority(
                     rounds[empty_candidate]
                 ):
@@ -105,7 +112,11 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
                 and i + 1 < len(reverse_labels)
                 and "APPEAL" in reverse_labels[i + 1]
                 and i + 2 < len(reverse_rounds)
-                and compute_majority(reverse_rounds[i + 2]) == "UNDETERMINED"
+                and compute_majority(reverse_rounds[i + 2])
+                in [
+                    "UNDETERMINED",
+                    "DISAGREE",
+                ]
             ):
                 if "UNSUCCESSFUL" in reverse_labels[i + 1]:
                     reverse_labels[i] = "SPLIT_PREVIOUS_APPEAL_BOND"
