@@ -16,10 +16,6 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_burnt,
     compute_all_zeros,
 )
-from fee_simulator.fee_aggregators.aggregated import (
-    compute_agg_costs,
-    compute_agg_earnings,
-)
 from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
@@ -134,12 +130,6 @@ def test_appeal_validator_successful(verbose, debug):
         compute_total_costs(fee_events, addresses_pool[23]) == appeal_bond
     ), f"Appealant should have cost equal to appeal_bond ({appeal_bond})"
 
-    # First Leader Fees Assert
-    assert (
-        compute_total_earnings(fee_events, addresses_pool[0])
-        == leaderTimeout + validatorsTimeout
-    ), f"First leader should earn leaderTimeout ({leaderTimeout}) + validatorsTimeout ({validatorsTimeout})"
-
     # Second Leader Fees Assert
     assert (
         compute_total_earnings(fee_events, addresses_pool[5])
@@ -147,9 +137,9 @@ def test_appeal_validator_successful(verbose, debug):
     ), f"Second leader should earn leaderTimeout ({leaderTimeout}) + validatorsTimeout ({2*validatorsTimeout})"
 
     assert all(
-        compute_total_earnings(fee_events, addresses_pool[i]) == 2 * validatorsTimeout
-        for i in [1, 2, 3, 4]
-    ), f"There is no majority, so previous round validators should earn 2*validatorsTimeout ({2*validatorsTimeout})"
+        compute_total_earnings(fee_events, addresses_pool[i]) == validatorsTimeout
+        for i in [1, 2, 4]
+    ), f"There is no majority, so previous round validators should earn validatorsTimeout ({validatorsTimeout})"
 
     # Minority Validator Fees Assert
     assert all(

@@ -14,10 +14,6 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_costs,
     compute_all_zeros,
 )
-from fee_simulator.fee_aggregators.aggregated import (
-    compute_agg_costs,
-    compute_agg_earnings,
-)
 from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,

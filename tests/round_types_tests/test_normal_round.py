@@ -19,10 +19,6 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_burnt,
     compute_total_balance,
 )
-from fee_simulator.fee_aggregators.aggregated import (
-    compute_agg_costs,
-    compute_agg_earnings,
-)
 from fee_simulator.constants import PENALTY_REWARD_COEFFICIENT
 from tests.invariant_checks import check_invariants
 
@@ -269,8 +265,8 @@ def test_normal_round_no_majority(verbose, debug):
     ), "Everyone else should have no fees in normal round"
 
 
-def test_normal_round_no_majority_disagree(verbose, debug):
-    """Test normal round with no majority (2 Agree, 3 Disagree)."""
+def test_normal_round_majority_disagree(verbose, debug):
+    """Test normal round with majority DISAGREE (2 Agree, 3 Disagree)."""
     # Setup
     rotation = Rotation(
         votes={
@@ -295,8 +291,8 @@ def test_normal_round_no_majority_disagree(verbose, debug):
     # Print if verbose
     if verbose:
         display_test_description(
-            test_name="test_normal_round_no_majority_disagree",
-            test_description="This test verifies the fee distribution for a normal round with no majority (2 Agree, 3 Disagree).",
+            test_name="test_normal_round_majority_disagree",
+            test_description="This test verifies the fee distribution for a normal round with majority DISAGREE (2 Agree, 3 Disagree).",
         )
         display_summary_table(
             fee_events, transaction_results, transaction_budget, round_labels
@@ -316,15 +312,20 @@ def test_normal_round_no_majority_disagree(verbose, debug):
 
     # Leader Fees Assert
     assert (
-        compute_total_earnings(fee_events, addresses_pool[0])
-        == leaderTimeout + validatorsTimeout
-    ), "Leader should have 100 (leader) + 200 (validator)"
+        compute_total_earnings(fee_events, addresses_pool[0]) == leaderTimeout
+    ), "Leader should have 100 (leader)"
 
     # Validator Fees Assert
     assert all(
         compute_total_earnings(fee_events, addresses_pool[i]) == validatorsTimeout
-        for i in [1, 2, 3, 4]
-    ), "Validators should have 200 due to no majority"
+        for i in [2, 3, 4]
+    ), "Validators should have 200 due to majority disagree"
+
+    assert all(
+        compute_total_burnt(fee_events, addresses_pool[i])
+        == PENALTY_REWARD_COEFFICIENT * validatorsTimeout
+        for i in [0, 1]
+    ), "Validators should have 200 due to majority disagree"
 
     # Sender Fees Assert
     total_cost = compute_total_cost(transaction_budget)

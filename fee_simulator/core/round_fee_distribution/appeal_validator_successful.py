@@ -57,24 +57,6 @@ def apply_appeal_validator_successful(
         total_votes = {**votes_this_round, **votes_previous_round}
         majority = compute_majority(total_votes)
         if majority == "UNDETERMINED":
-            leader_address = next(iter(votes_previous_round.keys()), None)
-            print(f"leader_address: {leader_address}")
-            if leader_address:
-                events.append(
-                    FeeEvent(
-                        sequence_id=event_sequence.next_id(),
-                        address=leader_address,
-                        round_index=round_index,
-                        round_label="APPEAL_VALIDATOR_SUCCESSFUL",
-                        role="LEADER",
-                        hash="0xdefault",
-                        cost=0,
-                        staked=0,
-                        earned=budget.leaderTimeout,
-                        slashed=0,
-                        burned=0,
-                    )
-                )
             for addr in total_votes:
                 events.append(
                     FeeEvent(
@@ -97,24 +79,6 @@ def apply_appeal_validator_successful(
             majority_addresses, minority_addresses = who_is_in_vote_majority(
                 total_votes, majority
             )
-            leader_address = next(iter(total_votes.keys()), None)
-            if leader_address in majority_addresses:
-                events.append(
-                    FeeEvent(
-                        sequence_id=event_sequence.next_id(),
-                        address=leader_address,
-                        round_index=round_index,
-                        round_label="APPEAL_VALIDATOR_SUCCESSFUL",
-                        role="LEADER",
-                        vote="NA",
-                        hash="0xdefault",
-                        cost=0,
-                        staked=0,
-                        earned=budget.leaderTimeout,
-                        slashed=0,
-                        burned=0,
-                    )
-                )
             for addr in majority_addresses:
                 events.append(
                     FeeEvent(

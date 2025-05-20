@@ -72,7 +72,7 @@ def compute_majority(rotation: Dict[str, Vote]) -> MajorityOutcome:
     if vote_counts["AGREE"] >= majority_threshold:
         return "AGREE"
     elif vote_counts["DISAGREE"] >= majority_threshold:
-        return "UNDETERMINED"
+        return "DISAGREE"
     elif vote_counts["TIMEOUT"] >= majority_threshold:
         return "TIMEOUT"
     else:
