@@ -42,6 +42,5 @@ def compute_unsuccessful_validator_appeal_burn(
             and "UNSUCCESSFUL" in event.round_label
         ):
             earned += event.earned
-    print(cost, earned)
     burn = cost - earned
     return burn

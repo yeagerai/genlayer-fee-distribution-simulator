@@ -89,7 +89,6 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
             else:
                 labels.append("NORMAL_ROUND")
                 continue
-    print(f"labels: {labels}")
     # Handle special cases with the reversed list
     reverse_labels = labels[::-1]
     reverse_rounds = rounds[::-1]
@@ -103,7 +102,6 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
                 and i + 2 < len(reverse_labels)
                 and reverse_labels[i + 2] == "LEADER_TIMEOUT"
             ):
-                print("I'M HERE")
                 reverse_labels[i] = "LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND"
                 reverse_labels[i + 2] = "SKIP_ROUND"
                 continue
