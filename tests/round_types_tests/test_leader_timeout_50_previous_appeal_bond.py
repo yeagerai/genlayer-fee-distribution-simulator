@@ -18,7 +18,9 @@ from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
     display_summary_table,
+    display_test_description,
 )
+from tests.invariant_checks import check_invariants
 
 leaderTimeout = 100
 validatorsTimeout = 200
@@ -34,6 +36,7 @@ transaction_budget = TransactionBudget(
     appeals=[Appeal(appealantAddress=addresses_pool[23])],
     staking_distribution="constant",
 )
+
 
 def test_leader_timeout_50_previous_appeal_bond(verbose, debug):
     """Test leader_timeout_50_previous_appeal_bond: leader timeout, appeal unsuccessful, leader timeout."""
@@ -78,11 +81,20 @@ def test_leader_timeout_50_previous_appeal_bond(verbose, debug):
 
     # Print if verbose
     if verbose:
-        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_test_description(
+            test_name="test_leader_timeout_50_previous_appeal_bond",
+            test_description="This test evaluates the fee distribution for a scenario involving a leader timeout, an unsuccessful appeal, and another leader timeout, labeled as LEADER_TIMEOUT_50_PREVIOUS_APPEAL_BOND. It sets up three rounds: a leader timeout, an appeal round, and another timeout round. The test confirms that the appealant incurs the appeal bond cost with no earnings, the first leader earns 50% of the leader timeout, the second leader earns half the appeal bond, and the sender's costs match the transaction cost.",
+        )
+        display_summary_table(
+            fee_events, transaction_results, transaction_budget, round_labels
+        )
         display_transaction_results(transaction_results, round_labels)
 
     if debug:
         display_fee_distribution(fee_events)
+
+    # Invariant Check
+    check_invariants(fee_events, transaction_budget, transaction_results)
 
     # Round Label Assert
     assert round_labels == [

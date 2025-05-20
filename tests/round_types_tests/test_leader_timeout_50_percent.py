@@ -16,7 +16,9 @@ from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
     display_summary_table,
+    display_test_description,
 )
+from tests.invariant_checks import check_invariants
 
 leaderTimeout = 100
 validatorsTimeout = 200
@@ -32,6 +34,7 @@ transaction_budget = TransactionBudget(
     appeals=[],
     staking_distribution="constant",
 )
+
 
 def test_leader_timeout_50_percent(verbose, debug):
     """Test fee distribution for a leader timeout round."""
@@ -57,11 +60,20 @@ def test_leader_timeout_50_percent(verbose, debug):
 
     # Print if verbose
     if verbose:
-        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_test_description(
+            test_name="test_leader_timeout_50_percent",
+            test_description="This test verifies the fee distribution for a single leader timeout round, labeled as LEADER_TIMEOUT_50_PERCENT. It simulates a round where the leader times out, and no validators vote. The test checks that the leader earns 50% of the leader timeout, all other participants (except the sender) have zero fees, and the sender's costs equal the total transaction cost.",
+        )
+        display_summary_table(
+            fee_events, transaction_results, transaction_budget, round_labels
+        )
         display_transaction_results(transaction_results, round_labels)
 
     if debug:
         display_fee_distribution(fee_events)
+
+    # Invariant Check
+    check_invariants(fee_events, transaction_budget, transaction_results)
 
     # Round Label Assert
     assert round_labels == [

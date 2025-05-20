@@ -23,16 +23,18 @@ from fee_simulator.core.round_fee_distribution import (
     apply_leader_timeout_150_previous_normal_round,
 )
 
-FeeTransformer = Callable[[TransactionRoundResults, int, TransactionBudget, EventSequence], List[FeeEvent]]
+FeeTransformer = Callable[
+    [TransactionRoundResults, int, TransactionBudget, EventSequence], List[FeeEvent]
+]
 
 FEE_RULES: Dict[RoundLabel, FeeTransformer] = {
     "NORMAL_ROUND": apply_normal_round,
     "EMPTY_ROUND": lambda r, i, b, s: [],
     "SKIP_ROUND": lambda r, i, b, s: [],
-    "APPEAL_LEADER_TIMEOUT_UNSUCCESSFUL":  lambda r, i, b, s: [],
+    "APPEAL_LEADER_TIMEOUT_UNSUCCESSFUL": lambda r, i, b, s: [],
     "APPEAL_LEADER_TIMEOUT_SUCCESSFUL": apply_appeal_leader_timeout_successful,
     "APPEAL_LEADER_SUCCESSFUL": apply_appeal_leader_successful,
-    "APPEAL_LEADER_UNSUCCESSFUL":  lambda r, i, b, s: [],
+    "APPEAL_LEADER_UNSUCCESSFUL": lambda r, i, b, s: [],
     "APPEAL_VALIDATOR_SUCCESSFUL": apply_appeal_validator_successful,
     "APPEAL_VALIDATOR_UNSUCCESSFUL": apply_appeal_validator_unsuccessful,
     "LEADER_TIMEOUT_50_PERCENT": apply_leader_timeout_50_percent,
@@ -41,12 +43,13 @@ FEE_RULES: Dict[RoundLabel, FeeTransformer] = {
     "LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND": apply_leader_timeout_150_previous_normal_round,
 }
 
+
 def distribute_round(
     transaction_results: TransactionRoundResults,
     round_index: int,
     label: RoundLabel,
     budget: TransactionBudget,
-    event_sequence: EventSequence
+    event_sequence: EventSequence,
 ) -> List[FeeEvent]:
     """
     Distribute fees for a single round based on its label, generating FeeEvent instances.

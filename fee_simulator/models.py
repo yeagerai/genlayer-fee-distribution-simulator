@@ -5,10 +5,12 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict, model_valida
 from fee_simulator.constants import ETH_ADDRESS_REGEX
 from fee_simulator.types import RoundLabel, Vote, Role
 
+
 class EventSequence:
     """
     Manages an auto-incrementing sequence counter for FeeEvent IDs.
     """
+
     def __init__(self):
         self._counter = 1
 
@@ -19,6 +21,7 @@ class EventSequence:
         current = self._counter
         self._counter += 1
         return current
+
 
 class Appeal(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -56,7 +59,8 @@ class Rotation(BaseModel):
             if isinstance(vote, list) and len(vote) > 1:
                 # Check if last element is a hash
                 if len(vote) == 3 or (
-                    len(vote) == 2 and vote[0] not in ["LEADER_RECEIPT", "LEADER_TIMEOUT"]
+                    len(vote) == 2
+                    and vote[0] not in ["LEADER_RECEIPT", "LEADER_TIMEOUT"]
                 ):
                     hash_value = vote[-1]
                     if not re.match(r"^0x[a-fA-F0-9]+$", hash_value):
@@ -65,13 +69,16 @@ class Rotation(BaseModel):
                         )
         return v
 
+
 class Round(BaseModel):
     model_config = ConfigDict(frozen=True)
     rotations: List[Rotation]
 
+
 class TransactionRoundResults(BaseModel):
     model_config = ConfigDict(frozen=True)
     rounds: List[Round]
+
 
 class FeeEvent(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -86,7 +93,8 @@ class FeeEvent(BaseModel):
     staked: int = Field(default=0, ge=0)
     earned: int = Field(default=0, ge=0)
     slashed: int = Field(default=0, ge=0)
-    burned: int = Field(default=0, ge=0) # penalty
+    burned: int = Field(default=0, ge=0)  # penalty
+
 
 class TransactionBudget(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, frozen=True)

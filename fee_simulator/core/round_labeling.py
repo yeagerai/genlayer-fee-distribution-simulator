@@ -3,6 +3,7 @@ from fee_simulator.models import TransactionRoundResults
 from fee_simulator.types import RoundLabel
 from fee_simulator.core.majority import compute_majority
 
+
 def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabel]:
     # Extract rounds for processing
     rounds = []
@@ -17,7 +18,7 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
     for i, round in enumerate(rounds):
         leader_addresses.append(next(iter(round.keys())))
     labels = ["NORMAL_ROUND"]
-    if rounds[0][leader_addresses[0]] == ["LEADER_TIMEOUT","NA"]:
+    if rounds[0][leader_addresses[0]] == ["LEADER_TIMEOUT", "NA"]:
         labels = ["LEADER_TIMEOUT"]
         if len(rounds) == 1:
             labels = ["LEADER_TIMEOUT_50_PERCENT"]
@@ -30,30 +31,30 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
             labels.append("EMPTY_ROUND")
         if i % 2 == 1:
             if (
-                rounds[i - 1][leader_addresses[i-1]] == ["LEADER_TIMEOUT","NA"]
+                rounds[i - 1][leader_addresses[i - 1]] == ["LEADER_TIMEOUT", "NA"]
                 and i + 1 < len(rounds)
-                and rounds[i + 1][leader_addresses[i+1]] == ["LEADER_TIMEOUT","NA"]
+                and rounds[i + 1][leader_addresses[i + 1]] == ["LEADER_TIMEOUT", "NA"]
             ):
                 labels.append("APPEAL_LEADER_TIMEOUT_UNSUCCESSFUL")
                 continue
             if (
-                rounds[i - 1][leader_addresses[i-1]] == ["LEADER_TIMEOUT","NA"]
+                rounds[i - 1][leader_addresses[i - 1]] == ["LEADER_TIMEOUT", "NA"]
                 and i + 1 < len(rounds)
-                and rounds[i + 1][leader_addresses[i+1]][0] == "LEADER_RECEIPT"
+                and rounds[i + 1][leader_addresses[i + 1]][0] == "LEADER_RECEIPT"
             ):
                 labels.append("APPEAL_LEADER_TIMEOUT_SUCCESSFUL")
                 continue
             if (
-                compute_majority(rounds[i - 1]) == "UNDETERMINED"
+                compute_majority(rounds[i - 1]) in ["UNDETERMINED", "DISAGREE"]
                 and i + 1 < len(rounds)
-                and compute_majority(rounds[i + 1]) != "UNDETERMINED"
+                and compute_majority(rounds[i + 1]) not in ["UNDETERMINED", "DISAGREE"]
             ):
                 labels.append("APPEAL_LEADER_SUCCESSFUL")
                 continue
             if (
-                compute_majority(rounds[i - 1]) == "UNDETERMINED"
+                compute_majority(rounds[i - 1]) in ["UNDETERMINED", "DISAGREE"]
                 and i + 1 < len(rounds)
-                and compute_majority(rounds[i + 1]) == "UNDETERMINED"
+                and compute_majority(rounds[i + 1]) in ["UNDETERMINED", "DISAGREE"]
             ):
                 labels.append("APPEAL_LEADER_UNSUCCESSFUL")
                 continue
@@ -62,10 +63,17 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
             while (
                 empty_candidate >= 0
                 and rounds[empty_candidate] == "EMPTY_ROUND"
-                and compute_majority(rounds[empty_candidate]) != "UNDETERMINED"
+                and compute_majority(rounds[empty_candidate])
+                not in [
+                    "UNDETERMINED",
+                    "DISAGREE",
+                ]
             ):
                 empty_candidate -= 2
-            if compute_majority(rounds[empty_candidate]) != "UNDETERMINED":
+            if compute_majority(rounds[empty_candidate]) not in [
+                "UNDETERMINED",
+                "DISAGREE",
+            ]:
                 if empty_candidate >= 0 and compute_majority(round) != compute_majority(
                     rounds[empty_candidate]
                 ):
@@ -75,7 +83,7 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
                     labels.append("APPEAL_VALIDATOR_UNSUCCESSFUL")
                     continue
         else:
-            if rounds[i][leader_addresses[i]] == ["LEADER_TIMEOUT","NA"]:
+            if rounds[i][leader_addresses[i]] == ["LEADER_TIMEOUT", "NA"]:
                 labels.append("LEADER_TIMEOUT")
                 continue
             else:
@@ -104,7 +112,11 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
                 and i + 1 < len(reverse_labels)
                 and "APPEAL" in reverse_labels[i + 1]
                 and i + 2 < len(reverse_rounds)
-                and compute_majority(reverse_rounds[i + 2]) == "UNDETERMINED"
+                and compute_majority(reverse_rounds[i + 2])
+                in [
+                    "UNDETERMINED",
+                    "DISAGREE",
+                ]
             ):
                 if "UNSUCCESSFUL" in reverse_labels[i + 1]:
                     reverse_labels[i] = "SPLIT_PREVIOUS_APPEAL_BOND"
@@ -124,9 +136,12 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
                 reverse_labels[i] = "LEADER_TIMEOUT_50_PREVIOUS_APPEAL_BOND"
                 reverse_labels[i + 2] = "LEADER_TIMEOUT_50_PERCENT"
                 continue
-        if i+1 < len(reverse_labels):
-            if reverse_labels[i] == "APPEAL_VALIDATOR_SUCCESSFUL" and reverse_labels[i-1] == "NORMAL_ROUND":
-                reverse_labels[i+1] = "SKIP_ROUND"
+        if i + 1 < len(reverse_labels):
+            if (
+                reverse_labels[i] == "APPEAL_VALIDATOR_SUCCESSFUL"
+                and reverse_labels[i - 1] == "NORMAL_ROUND"
+            ):
+                reverse_labels[i + 1] = "SKIP_ROUND"
                 continue
 
     labels = reverse_labels[::-1]

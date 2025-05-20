@@ -119,6 +119,14 @@ To run the entire test suite:
 pytest
 ```
 
+To run the entire test suite and log all the results in a file for future analysis:
+
+```
+pytest -s --verbose-output --debug-output > tests.txt 
+```
+
+And then `cat tests.txt` to visualize it.
+
 To run a specific test with verbose and debug output (displays formatted tables):
 
 ```bash

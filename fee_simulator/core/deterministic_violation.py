@@ -13,9 +13,9 @@ from fee_simulator.core.majority import (
 
 from fee_simulator.fee_aggregators.address_metrics import compute_current_stake
 
+
 def handle_deterministic_violations(
-    transaction_results: TransactionRoundResults, 
-    last_event_index: int
+    transaction_results: TransactionRoundResults, last_event_index: int
 ) -> List[FeeEvent]:
     fee_events = []
     new_event_index = last_event_index
@@ -39,11 +39,13 @@ def handle_deterministic_violations(
                         # Leader is slashed more (5%) than validators (1%)
                         current_stake = compute_current_stake(addr, fee_events)
                         slash_rate = 0.05 if addr == next(iter(votes.keys())) else 0.01
-                        fee_events.append(FeeEvent(
-                            sequence_id=new_event_index,
-                            address=addr,
-                            slashed=current_stake * (1-slash_rate),
-                        ))
+                        fee_events.append(
+                            FeeEvent(
+                                sequence_id=new_event_index,
+                                address=addr,
+                                slashed=current_stake * (1 - slash_rate),
+                            )
+                        )
                         new_event_index += 1
 
     return fee_events

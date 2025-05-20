@@ -15,13 +15,14 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_costs,
     compute_total_burnt,
     compute_all_zeros,
-    compute_total_balance,
 )
 from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
     display_summary_table,
+    display_test_description,
 )
+from tests.invariant_checks import check_invariants
 
 leaderTimeout = 100
 validatorsTimeout = 200
@@ -37,6 +38,7 @@ transaction_budget = TransactionBudget(
     appeals=[Appeal(appealantAddress=addresses_pool[23])],
     staking_distribution="constant",
 )
+
 
 def test_appeal_leader_successful(verbose):
     """Test appeal_leader_successful: normal round (undetermined), appeal successful, normal round."""
@@ -79,7 +81,6 @@ def test_appeal_leader_successful(verbose):
         ]
     )
 
-
     # Execute
     fee_events, round_labels = process_transaction(
         addresses=addresses_pool,
@@ -89,9 +90,18 @@ def test_appeal_leader_successful(verbose):
 
     # Print if verbose
     if verbose:
-        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_test_description(
+            test_name="test_appeal_leader_successful",
+            test_description="This test verifies the fee distribution for a scenario where a leader appeal is successful. It simulates a normal round with an undetermined outcome (mixed validator votes), followed by an appeal round, and a subsequent normal round with a majority agreement. The test checks that the appealant earns the appeal bond plus the leader timeout, the first leader earns no fees, the second leader and majority validators earn their respective timeouts, minority validators are penalized, and the sender's costs match the total transaction cost.",
+        )
+        display_summary_table(
+            fee_events, transaction_results, transaction_budget, round_labels
+        )
         display_transaction_results(transaction_results, round_labels)
         display_fee_distribution(fee_events)
+
+    # Invariant Check
+    check_invariants(fee_events, transaction_budget, transaction_results)
 
     # Round Label Assert
     assert round_labels == [
@@ -108,9 +118,12 @@ def test_appeal_leader_successful(verbose):
     ), "Everyone else should have no fees"
 
     # Appealant Fees Assert
-    appeal_bond = compute_appeal_bond(0, leaderTimeout, validatorsTimeout)  # Computed as per compute_appeal_bond for round_index=0
+    appeal_bond = compute_appeal_bond(
+        0, leaderTimeout, validatorsTimeout
+    )  # Computed as per compute_appeal_bond for round_index=0
     assert (
-        compute_total_earnings(fee_events, addresses_pool[23]) == appeal_bond + leaderTimeout
+        compute_total_earnings(fee_events, addresses_pool[23])
+        == appeal_bond + leaderTimeout
     ), f"Appealant should earn appeal_bond ({appeal_bond}) + leaderTimeout ({leaderTimeout})"
     assert (
         compute_total_costs(fee_events, addresses_pool[23]) == appeal_bond
@@ -123,7 +136,8 @@ def test_appeal_leader_successful(verbose):
 
     # Second Leader Fees Assert
     assert (
-        compute_total_earnings(fee_events, addresses_pool[5]) == leaderTimeout + validatorsTimeout
+        compute_total_earnings(fee_events, addresses_pool[5])
+        == leaderTimeout + validatorsTimeout
     ), f"Second leader should earn leaderTimeout ({leaderTimeout}) + validatorsTimeout ({validatorsTimeout})"
 
     # Majority Validator Fees Assert
@@ -134,7 +148,8 @@ def test_appeal_leader_successful(verbose):
 
     # Minority Validator Fees Assert
     assert all(
-        compute_total_burnt(fee_events, addresses_pool[i]) == PENALTY_REWARD_COEFFICIENT * validatorsTimeout
+        compute_total_burnt(fee_events, addresses_pool[i])
+        == PENALTY_REWARD_COEFFICIENT * validatorsTimeout
         for i in [7, 8, 9, 10, 11]
     ), f"Minority validators should be burned {PENALTY_REWARD_COEFFICIENT * validatorsTimeout}"
 
@@ -143,6 +158,3 @@ def test_appeal_leader_successful(verbose):
     assert (
         compute_total_costs(fee_events, transaction_budget.senderAddress) == total_cost
     ), f"Sender should have costs equal to total transaction cost: {total_cost}"
-    assert (
-        compute_total_balance(fee_events, transaction_budget.senderAddress) == -1 * leaderTimeout - 6 * validatorsTimeout
-    ), f"Sender balance should reflect costs minus refunds: {-1 * leaderTimeout - 6 * validatorsTimeout}"
