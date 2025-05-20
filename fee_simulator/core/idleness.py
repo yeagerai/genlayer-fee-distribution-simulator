@@ -13,6 +13,7 @@ from fee_simulator.core.majority import (
 
 from fee_simulator.fee_aggregators.address_metrics import compute_current_stake
 
+
 def replace_idle_participants(
     event_sequence: EventSequence,
     fee_events: List[FeeEvent],
@@ -37,11 +38,13 @@ def replace_idle_participants(
         # Slash idle validators
         for addr in idle_addresses:
             current_stake = compute_current_stake(addr, new_fee_events)
-            new_fee_events.append(FeeEvent(
-                sequence_id=event_sequence.next_id(),
-                address=addr,
-                slashed=current_stake * 0.01,
-            ))
+            new_fee_events.append(
+                FeeEvent(
+                    sequence_id=event_sequence.next_id(),
+                    address=addr,
+                    slashed=current_stake * 0.01,
+                )
+            )
 
         # Replace idle validators with reserves
         if idle_addresses:
@@ -66,10 +69,12 @@ def replace_idle_participants(
 
             # Update votes in the rotation
             new_round = Round(
-                rotations=[Rotation(
-                    votes=new_votes,
-                    reserve_votes=rotation.reserve_votes,
-                )],
+                rotations=[
+                    Rotation(
+                        votes=new_votes,
+                        reserve_votes=rotation.reserve_votes,
+                    )
+                ],
             )
             new_rounds.append(new_round)
         else:

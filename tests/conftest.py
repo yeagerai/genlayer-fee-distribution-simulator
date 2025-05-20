@@ -21,6 +21,7 @@ def verbose(request):
     """Fixture to determine if verbose output is enabled."""
     return request.config.getoption("--verbose-output")
 
+
 @pytest.fixture
 def debug(request):
     """Fixture to determine if debug output is enabled."""

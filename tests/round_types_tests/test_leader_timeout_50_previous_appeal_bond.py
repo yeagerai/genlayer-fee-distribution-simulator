@@ -14,7 +14,10 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_costs,
     compute_all_zeros,
 )
-from fee_simulator.fee_aggregators.aggregated import compute_agg_costs, compute_agg_earnings
+from fee_simulator.fee_aggregators.aggregated import (
+    compute_agg_costs,
+    compute_agg_earnings,
+)
 from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
@@ -22,6 +25,7 @@ from fee_simulator.display import (
     display_test_description,
 )
 from tests.invariant_checks import check_invariants
+
 leaderTimeout = 100
 validatorsTimeout = 200
 
@@ -36,6 +40,7 @@ transaction_budget = TransactionBudget(
     appeals=[Appeal(appealantAddress=addresses_pool[23])],
     staking_distribution="constant",
 )
+
 
 def test_leader_timeout_50_previous_appeal_bond(verbose, debug):
     """Test leader_timeout_50_previous_appeal_bond: leader timeout, appeal unsuccessful, leader timeout."""
@@ -82,9 +87,11 @@ def test_leader_timeout_50_previous_appeal_bond(verbose, debug):
     if verbose:
         display_test_description(
             test_name="test_leader_timeout_50_previous_appeal_bond",
-            test_description="This test evaluates the fee distribution for a scenario involving a leader timeout, an unsuccessful appeal, and another leader timeout, labeled as LEADER_TIMEOUT_50_PREVIOUS_APPEAL_BOND. It sets up three rounds: a leader timeout, an appeal round, and another timeout round. The test confirms that the appealant incurs the appeal bond cost with no earnings, the first leader earns 50% of the leader timeout, the second leader earns half the appeal bond, and the sender's costs match the transaction cost."
+            test_description="This test evaluates the fee distribution for a scenario involving a leader timeout, an unsuccessful appeal, and another leader timeout, labeled as LEADER_TIMEOUT_50_PREVIOUS_APPEAL_BOND. It sets up three rounds: a leader timeout, an appeal round, and another timeout round. The test confirms that the appealant incurs the appeal bond cost with no earnings, the first leader earns 50% of the leader timeout, the second leader earns half the appeal bond, and the sender's costs match the transaction cost.",
         )
-        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_summary_table(
+            fee_events, transaction_results, transaction_budget, round_labels
+        )
         display_transaction_results(transaction_results, round_labels)
 
     if debug:
@@ -135,4 +142,3 @@ def test_leader_timeout_50_previous_appeal_bond(verbose, debug):
     assert (
         compute_total_costs(fee_events, transaction_budget.senderAddress) == total_cost
     ), f"Sender should have costs equal to total transaction cost: {total_cost}"
-    

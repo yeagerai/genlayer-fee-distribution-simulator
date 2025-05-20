@@ -12,7 +12,10 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_costs,
     compute_all_zeros,
 )
-from fee_simulator.fee_aggregators.aggregated import compute_agg_costs, compute_agg_earnings
+from fee_simulator.fee_aggregators.aggregated import (
+    compute_agg_costs,
+    compute_agg_earnings,
+)
 from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
@@ -20,6 +23,7 @@ from fee_simulator.display import (
     display_test_description,
 )
 from tests.invariant_checks import check_invariants
+
 leaderTimeout = 100
 validatorsTimeout = 200
 
@@ -34,6 +38,7 @@ transaction_budget = TransactionBudget(
     appeals=[],
     staking_distribution="constant",
 )
+
 
 def test_leader_timeout_50_percent(verbose, debug):
     """Test fee distribution for a leader timeout round."""
@@ -61,9 +66,11 @@ def test_leader_timeout_50_percent(verbose, debug):
     if verbose:
         display_test_description(
             test_name="test_leader_timeout_50_percent",
-            test_description="This test verifies the fee distribution for a single leader timeout round, labeled as LEADER_TIMEOUT_50_PERCENT. It simulates a round where the leader times out, and no validators vote. The test checks that the leader earns 50% of the leader timeout, all other participants (except the sender) have zero fees, and the sender's costs equal the total transaction cost."
-        )   
-        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+            test_description="This test verifies the fee distribution for a single leader timeout round, labeled as LEADER_TIMEOUT_50_PERCENT. It simulates a round where the leader times out, and no validators vote. The test checks that the leader earns 50% of the leader timeout, all other participants (except the sender) have zero fees, and the sender's costs equal the total transaction cost.",
+        )
+        display_summary_table(
+            fee_events, transaction_results, transaction_budget, round_labels
+        )
         display_transaction_results(transaction_results, round_labels)
 
     if debug:
@@ -94,4 +101,3 @@ def test_leader_timeout_50_percent(verbose, debug):
     assert (
         compute_total_costs(fee_events, transaction_budget.senderAddress) == total_cost
     ), f"Sender should have costs equal to total transaction cost: {total_cost}"
-

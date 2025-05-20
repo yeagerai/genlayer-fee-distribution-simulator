@@ -2,6 +2,7 @@ from typing import Union, List, Dict, Tuple
 from tabulate import tabulate
 from fee_simulator.types import Vote
 
+
 # Terminal colors
 class Colors:
     HEADER = "\033[95m"
@@ -17,6 +18,7 @@ class Colors:
     @classmethod
     def colorize(cls, text: str, color: str) -> str:
         return f"{color}{text}{cls.ENDC}" if color else text
+
 
 # Common color mappings
 ROUND_LABEL_COLORS = {
@@ -54,9 +56,11 @@ VOTE_TYPE_COLORS = {
     "LEADER_TIMEOUT": Colors.CYAN,
 }
 
+
 def format_address(addr: str, max_len: int = 20) -> str:
     """Format an address to show first 8 and last 6 characters if too long."""
     return f"{addr[:8]}...{addr[-6:]}" if len(addr) > max_len else addr
+
 
 def format_vote(vote: Vote, is_leader: bool = False) -> Tuple[str, str]:
     """Format a vote and determine its type.
@@ -73,10 +77,16 @@ def format_vote(vote: Vote, is_leader: bool = False) -> Tuple[str, str]:
 
     return vote_display, vote_type
 
-def colorize_financial(value: float, positive_color: str = Colors.GREEN, negative_color: str = Colors.RED) -> str:
+
+def colorize_financial(
+    value: float, positive_color: str = Colors.GREEN, negative_color: str = Colors.RED
+) -> str:
     """Colorize a financial value based on whether it's positive or negative."""
-    color = positive_color if value > 0 else negative_color if value < 0 else Colors.ENDC
+    color = (
+        positive_color if value > 0 else negative_color if value < 0 else Colors.ENDC
+    )
     return Colors.colorize(str(value), color)
+
 
 def create_table(headers: List[str], data: List[List[str]], title: str = "") -> None:
     """Create and print a formatted table with an optional title."""
@@ -87,7 +97,10 @@ def create_table(headers: List[str], data: List[List[str]], title: str = "") -> 
         return
     print(tabulate(data, headers=headers, tablefmt="fancy_grid"))
 
-def _create_table_rows(headers: List[str], data: List[List[str]], title: str = "") -> List[str]:
+
+def _create_table_rows(
+    headers: List[str], data: List[List[str]], title: str = ""
+) -> List[str]:
     """
     Create a table and return its rows as a list of strings, without printing.
 
@@ -111,6 +124,7 @@ def _create_table_rows(headers: List[str], data: List[List[str]], title: str = "
     table_rows.extend(table_str.split("\n"))
     return table_rows
 
+
 def get_vote_summary(votes: Dict[str, Vote]) -> List[List[str]]:
     """Summarize votes by type and count."""
     vote_counts = {
@@ -121,16 +135,23 @@ def get_vote_summary(votes: Dict[str, Vote]) -> List[List[str]]:
         "NA": 0,
     }
     for vote in votes.values():
-        is_leader = isinstance(vote, list) and vote[0] in ["LEADER_RECEIPT", "LEADER_TIMEOUT"]
+        is_leader = isinstance(vote, list) and vote[0] in [
+            "LEADER_RECEIPT",
+            "LEADER_TIMEOUT",
+        ]
         _, vote_type = format_vote(vote, is_leader)
         if vote_type in vote_counts:
             vote_counts[vote_type] += 1
 
     return [
-        [vote_type, Colors.colorize(str(count), VOTE_TYPE_COLORS.get(vote_type, Colors.ENDC))]
+        [
+            vote_type,
+            Colors.colorize(str(count), VOTE_TYPE_COLORS.get(vote_type, Colors.ENDC)),
+        ]
         for vote_type, count in vote_counts.items()
         if count > 0
     ]
+
 
 def display_test_description(test_name: str, test_description: str) -> None:
     print("\n\n\n\n\n\n\n\n")

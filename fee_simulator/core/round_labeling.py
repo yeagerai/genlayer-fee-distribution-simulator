@@ -3,6 +3,7 @@ from fee_simulator.models import TransactionRoundResults
 from fee_simulator.types import RoundLabel
 from fee_simulator.core.majority import compute_majority
 
+
 def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabel]:
     # Extract rounds for processing
     rounds = []
@@ -17,7 +18,7 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
     for i, round in enumerate(rounds):
         leader_addresses.append(next(iter(round.keys())))
     labels = ["NORMAL_ROUND"]
-    if rounds[0][leader_addresses[0]] == ["LEADER_TIMEOUT","NA"]:
+    if rounds[0][leader_addresses[0]] == ["LEADER_TIMEOUT", "NA"]:
         labels = ["LEADER_TIMEOUT"]
         if len(rounds) == 1:
             labels = ["LEADER_TIMEOUT_50_PERCENT"]
@@ -30,16 +31,16 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
             labels.append("EMPTY_ROUND")
         if i % 2 == 1:
             if (
-                rounds[i - 1][leader_addresses[i-1]] == ["LEADER_TIMEOUT","NA"]
+                rounds[i - 1][leader_addresses[i - 1]] == ["LEADER_TIMEOUT", "NA"]
                 and i + 1 < len(rounds)
-                and rounds[i + 1][leader_addresses[i+1]] == ["LEADER_TIMEOUT","NA"]
+                and rounds[i + 1][leader_addresses[i + 1]] == ["LEADER_TIMEOUT", "NA"]
             ):
                 labels.append("APPEAL_LEADER_TIMEOUT_UNSUCCESSFUL")
                 continue
             if (
-                rounds[i - 1][leader_addresses[i-1]] == ["LEADER_TIMEOUT","NA"]
+                rounds[i - 1][leader_addresses[i - 1]] == ["LEADER_TIMEOUT", "NA"]
                 and i + 1 < len(rounds)
-                and rounds[i + 1][leader_addresses[i+1]][0] == "LEADER_RECEIPT"
+                and rounds[i + 1][leader_addresses[i + 1]][0] == "LEADER_RECEIPT"
             ):
                 labels.append("APPEAL_LEADER_TIMEOUT_SUCCESSFUL")
                 continue
@@ -75,7 +76,7 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
                     labels.append("APPEAL_VALIDATOR_UNSUCCESSFUL")
                     continue
         else:
-            if rounds[i][leader_addresses[i]] == ["LEADER_TIMEOUT","NA"]:
+            if rounds[i][leader_addresses[i]] == ["LEADER_TIMEOUT", "NA"]:
                 labels.append("LEADER_TIMEOUT")
                 continue
             else:
@@ -124,9 +125,12 @@ def label_rounds(transaction_results: TransactionRoundResults) -> List[RoundLabe
                 reverse_labels[i] = "LEADER_TIMEOUT_50_PREVIOUS_APPEAL_BOND"
                 reverse_labels[i + 2] = "LEADER_TIMEOUT_50_PERCENT"
                 continue
-        if i+1 < len(reverse_labels):
-            if reverse_labels[i] == "APPEAL_VALIDATOR_SUCCESSFUL" and reverse_labels[i-1] == "NORMAL_ROUND":
-                reverse_labels[i+1] = "SKIP_ROUND"
+        if i + 1 < len(reverse_labels):
+            if (
+                reverse_labels[i] == "APPEAL_VALIDATOR_SUCCESSFUL"
+                and reverse_labels[i - 1] == "NORMAL_ROUND"
+            ):
+                reverse_labels[i + 1] = "SKIP_ROUND"
                 continue
 
     labels = reverse_labels[::-1]

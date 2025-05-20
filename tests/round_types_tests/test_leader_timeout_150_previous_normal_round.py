@@ -16,7 +16,10 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_burnt,
     compute_all_zeros,
 )
-from fee_simulator.fee_aggregators.aggregated import compute_agg_costs, compute_agg_earnings
+from fee_simulator.fee_aggregators.aggregated import (
+    compute_agg_costs,
+    compute_agg_earnings,
+)
 from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
@@ -39,6 +42,7 @@ transaction_budget = TransactionBudget(
     appeals=[Appeal(appealantAddress=addresses_pool[23])],
     staking_distribution="constant",
 )
+
 
 def test_leader_timeout_150_previous_normal_round(verbose, debug):
     """Test leader_timeout_150_previous_normal_round: leader timeout, appeal successful, normal round."""
@@ -89,9 +93,11 @@ def test_leader_timeout_150_previous_normal_round(verbose, debug):
     if verbose:
         display_test_description(
             test_name="test_leader_timeout_150_previous_normal_round",
-            test_description="This test assesses the fee distribution for a leader timeout scenario followed by a successful appeal and a normal round, labeled as LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND. It involves a leader timeout round, an appeal round, and a normal round with a majority agreement. The test ensures the appealant earns the appeal bond plus half the leader timeout, the second leader earns 150% of the leader timeout plus validator timeout, majority validators earn validator timeouts, minority validators are penalized, and the sender's costs are correct."
+            test_description="This test assesses the fee distribution for a leader timeout scenario followed by a successful appeal and a normal round, labeled as LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND. It involves a leader timeout round, an appeal round, and a normal round with a majority agreement. The test ensures the appealant earns the appeal bond plus half the leader timeout, the second leader earns 150% of the leader timeout plus validator timeout, majority validators earn validator timeouts, minority validators are penalized, and the sender's costs are correct.",
         )
-        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_summary_table(
+            fee_events, transaction_results, transaction_budget, round_labels
+        )
         display_transaction_results(transaction_results, round_labels)
 
     if debug:
@@ -103,7 +109,9 @@ def test_leader_timeout_150_previous_normal_round(verbose, debug):
     # Round Label Assert
     print(f"round_labels: {round_labels}")
     assert round_labels == [
-        'SKIP_ROUND', 'APPEAL_LEADER_TIMEOUT_SUCCESSFUL', 'LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND'
+        "SKIP_ROUND",
+        "APPEAL_LEADER_TIMEOUT_SUCCESSFUL",
+        "LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND",
     ], f"Expected ['SKIP_ROUND', 'APPEAL_LEADER_TIMEOUT_SUCCESSFUL', 'LEADER_TIMEOUT_150_PREVIOUS_NORMAL_ROUND'], got {round_labels}"
 
     # Everyone Else 0 Fees Assert
@@ -120,7 +128,8 @@ def test_leader_timeout_150_previous_normal_round(verbose, debug):
         validators_timeout=validatorsTimeout,
     )
     assert (
-        compute_total_earnings(fee_events, addresses_pool[23]) == appeal_bond + leaderTimeout / 2
+        compute_total_earnings(fee_events, addresses_pool[23])
+        == appeal_bond + leaderTimeout / 2
     ), f"Appealant should earn appeal_bond ({appeal_bond}) + 50% of leaderTimeout ({leaderTimeout / 2})"
     assert (
         compute_total_costs(fee_events, addresses_pool[23]) == appeal_bond
@@ -133,7 +142,8 @@ def test_leader_timeout_150_previous_normal_round(verbose, debug):
 
     # Second Leader Fees Assert
     assert (
-        compute_total_earnings(fee_events, addresses_pool[5]) == leaderTimeout * 1.5 + validatorsTimeout
+        compute_total_earnings(fee_events, addresses_pool[5])
+        == leaderTimeout * 1.5 + validatorsTimeout
     ), f"Second leader should earn 150% of leaderTimeout ({leaderTimeout * 1.5})"
 
     # Majority Validator Fees Assert
@@ -144,7 +154,8 @@ def test_leader_timeout_150_previous_normal_round(verbose, debug):
 
     # Minority Validator Fees Assert
     assert all(
-        compute_total_burnt(fee_events, addresses_pool[i]) == PENALTY_REWARD_COEFFICIENT * validatorsTimeout
+        compute_total_burnt(fee_events, addresses_pool[i])
+        == PENALTY_REWARD_COEFFICIENT * validatorsTimeout
         for i in [7, 8, 9, 10, 11]
     ), f"Minority validators should be burned {PENALTY_REWARD_COEFFICIENT * validatorsTimeout}"
 

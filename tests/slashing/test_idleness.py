@@ -36,10 +36,11 @@ transaction_budget = TransactionBudget(
     staking_distribution="constant",
 )
 
+
 def test_idle_round(verbose, debug):
     """
     Test fee distribution for a normal round where some validators are idle.
-    
+
     Description:
     This test verifies the fee distribution and stake slashing in a normal round where two validators
     are idle and are replaced by reserve validators. The leader and active validators vote 'AGREE',
@@ -78,7 +79,9 @@ def test_idle_round(verbose, debug):
 
     # Print if verbose
     if verbose:
-        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_summary_table(
+            fee_events, transaction_results, transaction_budget, round_labels
+        )
         display_transaction_results(transaction_results, round_labels)
 
     if debug:
@@ -99,7 +102,8 @@ def test_idle_round(verbose, debug):
 
     # Leader Fees Assert
     assert (
-        compute_total_earnings(fee_events, addresses_pool[0]) == leaderTimeout + validatorsTimeout
+        compute_total_earnings(fee_events, addresses_pool[0])
+        == leaderTimeout + validatorsTimeout
     ), f"Leader should earn leaderTimeout ({leaderTimeout}) + validatorsTimeout ({validatorsTimeout})"
 
     # Majority Validator Fees Assert
@@ -121,7 +125,6 @@ def test_idle_round(verbose, debug):
     assert (
         compute_total_costs(fee_events, transaction_budget.senderAddress) == total_cost
     ), f"Sender should have costs equal to total transaction cost: {total_cost}"
-
 
     # Everyone Else 0 Fees Assert
     assert all(

@@ -16,7 +16,10 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_burnt,
     compute_all_zeros,
 )
-from fee_simulator.fee_aggregators.aggregated import compute_agg_costs, compute_agg_earnings
+from fee_simulator.fee_aggregators.aggregated import (
+    compute_agg_costs,
+    compute_agg_earnings,
+)
 from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
@@ -24,6 +27,7 @@ from fee_simulator.display import (
     display_test_description,
 )
 from tests.invariant_checks import check_invariants
+
 leaderTimeout = 100
 validatorsTimeout = 200
 
@@ -38,6 +42,7 @@ transaction_budget = TransactionBudget(
     appeals=[Appeal(appealantAddress=addresses_pool[23])],
     staking_distribution="constant",
 )
+
 
 def test_appeal_validator_unsuccessful(verbose, debug):
     """Test appeal_validator_unsuccessful: normal round (undetermined), appeal unsuccessful."""
@@ -72,9 +77,11 @@ def test_appeal_validator_unsuccessful(verbose, debug):
     if verbose:
         display_test_description(
             test_name="test_appeal_validator_unsuccessful",
-            test_description="This test checks the fee distribution for an unsuccessful validator appeal. It simulates a normal round with an undetermined outcome followed by an appeal round where validators vote in majority agreement. The test verifies that the appealant incurs the appeal bond cost with no earnings, the first leader earns both leader and validator timeouts, the second leader and majority validators earn validator timeouts, minority validators are penalized, and the sender's costs match the transaction cost."
+            test_description="This test checks the fee distribution for an unsuccessful validator appeal. It simulates a normal round with an undetermined outcome followed by an appeal round where validators vote in majority agreement. The test verifies that the appealant incurs the appeal bond cost with no earnings, the first leader earns both leader and validator timeouts, the second leader and majority validators earn validator timeouts, minority validators are penalized, and the sender's costs match the transaction cost.",
         )
-        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_summary_table(
+            fee_events, transaction_results, transaction_budget, round_labels
+        )
         display_transaction_results(transaction_results, round_labels)
 
     if debug:
@@ -111,7 +118,8 @@ def test_appeal_validator_unsuccessful(verbose, debug):
 
     # First Leader Fees Assert
     assert (
-        compute_total_earnings(fee_events, addresses_pool[0]) == leaderTimeout + validatorsTimeout
+        compute_total_earnings(fee_events, addresses_pool[0])
+        == leaderTimeout + validatorsTimeout
     ), f"First leader should earn leaderTimeout ({leaderTimeout}) + validatorsTimeout ({validatorsTimeout})"
 
     # Second Leader Fees Assert
@@ -127,7 +135,8 @@ def test_appeal_validator_unsuccessful(verbose, debug):
 
     # Minority Validator Fees Assert
     assert all(
-        compute_total_burnt(fee_events, addresses_pool[i]) == PENALTY_REWARD_COEFFICIENT * validatorsTimeout
+        compute_total_burnt(fee_events, addresses_pool[i])
+        == PENALTY_REWARD_COEFFICIENT * validatorsTimeout
         for i in [3, 4]
     ), f"Minority validators should be burned {PENALTY_REWARD_COEFFICIENT * validatorsTimeout}"
 

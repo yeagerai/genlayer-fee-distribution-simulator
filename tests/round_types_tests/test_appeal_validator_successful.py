@@ -16,7 +16,10 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_burnt,
     compute_all_zeros,
 )
-from fee_simulator.fee_aggregators.aggregated import compute_agg_costs, compute_agg_earnings
+from fee_simulator.fee_aggregators.aggregated import (
+    compute_agg_costs,
+    compute_agg_earnings,
+)
 from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
@@ -39,6 +42,7 @@ transaction_budget = TransactionBudget(
     appeals=[Appeal(appealantAddress=addresses_pool[23])],
     staking_distribution="constant",
 )
+
 
 def test_appeal_validator_successful(verbose, debug):
     """Test appeal_validator_successful: normal round (undetermined), appeal successful, normal round."""
@@ -89,9 +93,11 @@ def test_appeal_validator_successful(verbose, debug):
     if verbose:
         display_test_description(
             test_name="test_appeal_validator_successful",
-            test_description="This test evaluates the fee distribution for a successful validator appeal. It involves a normal round with an undetermined outcome, an appeal round with validator votes, and a normal round with a majority agreement. The test confirms that the appealant earns the appeal bond plus the leader timeout, the first and second leaders earn their timeouts, majority validators earn double timeouts due to participation in multiple rounds, minority validators are penalized, and the sender's costs align with the transaction cost."
+            test_description="This test evaluates the fee distribution for a successful validator appeal. It involves a normal round with an undetermined outcome, an appeal round with validator votes, and a normal round with a majority agreement. The test confirms that the appealant earns the appeal bond plus the leader timeout, the first and second leaders earn their timeouts, majority validators earn double timeouts due to participation in multiple rounds, minority validators are penalized, and the sender's costs align with the transaction cost.",
         )
-        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_summary_table(
+            fee_events, transaction_results, transaction_budget, round_labels
+        )
         display_transaction_results(transaction_results, round_labels)
 
     if debug:
@@ -121,7 +127,8 @@ def test_appeal_validator_successful(verbose, debug):
         validators_timeout=validatorsTimeout,
     )
     assert (
-        compute_total_earnings(fee_events, addresses_pool[23]) == appeal_bond + leaderTimeout
+        compute_total_earnings(fee_events, addresses_pool[23])
+        == appeal_bond + leaderTimeout
     ), f"Appealant should earn appeal_bond ({appeal_bond}) + leaderTimeout ({leaderTimeout})"
     assert (
         compute_total_costs(fee_events, addresses_pool[23]) == appeal_bond
@@ -129,23 +136,26 @@ def test_appeal_validator_successful(verbose, debug):
 
     # First Leader Fees Assert
     assert (
-        compute_total_earnings(fee_events, addresses_pool[0]) == leaderTimeout + validatorsTimeout
+        compute_total_earnings(fee_events, addresses_pool[0])
+        == leaderTimeout + validatorsTimeout
     ), f"First leader should earn leaderTimeout ({leaderTimeout}) + validatorsTimeout ({validatorsTimeout})"
 
     # Second Leader Fees Assert
     assert (
-        compute_total_earnings(fee_events, addresses_pool[5]) == leaderTimeout + 2*validatorsTimeout
+        compute_total_earnings(fee_events, addresses_pool[5])
+        == leaderTimeout + 2 * validatorsTimeout
     ), f"Second leader should earn leaderTimeout ({leaderTimeout}) + validatorsTimeout ({2*validatorsTimeout})"
 
     assert all(
-        compute_total_earnings(fee_events, addresses_pool[i]) == 2*validatorsTimeout
-        for i in [1,2,3, 4]
+        compute_total_earnings(fee_events, addresses_pool[i]) == 2 * validatorsTimeout
+        for i in [1, 2, 3, 4]
     ), f"There is no majority, so previous round validators should earn 2*validatorsTimeout ({2*validatorsTimeout})"
 
     # Minority Validator Fees Assert
     assert all(
-        compute_total_burnt(fee_events, addresses_pool[i]) == PENALTY_REWARD_COEFFICIENT * validatorsTimeout
-        for i in [9,10, 11]
+        compute_total_burnt(fee_events, addresses_pool[i])
+        == PENALTY_REWARD_COEFFICIENT * validatorsTimeout
+        for i in [9, 10, 11]
     ), f"Minority validators should be burned {PENALTY_REWARD_COEFFICIENT * validatorsTimeout}"
 
     # Sender Fees Assert

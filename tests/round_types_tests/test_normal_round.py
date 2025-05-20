@@ -5,10 +5,7 @@ from fee_simulator.models import (
     TransactionBudget,
 )
 from fee_simulator.core.transaction_processing import process_transaction
-from fee_simulator.utils import (
-    compute_total_cost,
-    generate_random_eth_address
-)
+from fee_simulator.utils import compute_total_cost, generate_random_eth_address
 from fee_simulator.display import (
     display_transaction_results,
     display_fee_distribution,
@@ -22,7 +19,10 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_total_burnt,
     compute_total_balance,
 )
-from fee_simulator.fee_aggregators.aggregated import compute_agg_costs, compute_agg_earnings
+from fee_simulator.fee_aggregators.aggregated import (
+    compute_agg_costs,
+    compute_agg_earnings,
+)
 from fee_simulator.constants import PENALTY_REWARD_COEFFICIENT
 from tests.invariant_checks import check_invariants
 
@@ -40,6 +40,7 @@ default_budget = TransactionBudget(
     appeals=[],
     staking_distribution="constant",
 )
+
 
 def test_normal_round(verbose, debug):
     """Test fee distribution for a normal round with all validators agreeing."""
@@ -69,9 +70,11 @@ def test_normal_round(verbose, debug):
     if verbose:
         display_test_description(
             test_name="test_normal_round",
-            test_description="This test verifies the fee distribution for a normal round with all validators agreeing. It sets up a round with a majority agreement, and verifies that the leader earns the leader timeout plus validator timeout, validators earn the validator timeout, and the sender's costs match the total transaction cost."
+            test_description="This test verifies the fee distribution for a normal round with all validators agreeing. It sets up a round with a majority agreement, and verifies that the leader earns the leader timeout plus validator timeout, validators earn the validator timeout, and the sender's costs match the total transaction cost.",
         )
-        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_summary_table(
+            fee_events, transaction_results, transaction_budget, round_labels
+        )
         display_transaction_results(transaction_results, round_labels)
 
     if debug:
@@ -138,14 +141,16 @@ def test_normal_round_with_minority_penalties(verbose, debug):
     if verbose:
         display_test_description(
             test_name="test_normal_round_with_minority_penalties",
-            test_description="This test verifies the fee distribution for a normal round with penalties for validators in the minority (3 Agree, 1 Disagree, 1 Timeout)."
+            test_description="This test verifies the fee distribution for a normal round with penalties for validators in the minority (3 Agree, 1 Disagree, 1 Timeout).",
         )
-        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_summary_table(
+            fee_events, transaction_results, transaction_budget, round_labels
+        )
         display_transaction_results(transaction_results, round_labels)
 
     if debug:
         display_fee_distribution(fee_events)
-   
+
     # Invariant Check
     check_invariants(fee_events, transaction_budget, transaction_results)
 
@@ -182,7 +187,7 @@ def test_normal_round_with_minority_penalties(verbose, debug):
     # Sender Total Balance Assert
     total_balance = compute_total_balance(fee_events, default_budget.senderAddress)
     assert (
-        -leaderTimeout - 3*validatorsTimeout == total_balance
+        -leaderTimeout - 3 * validatorsTimeout == total_balance
     ), f"Sender should have been refunded and thus have a balance of: {-leaderTimeout - 3*validatorsTimeout}"
 
     # Everyone Else 0 Fees Assert
@@ -191,6 +196,7 @@ def test_normal_round_with_minority_penalties(verbose, debug):
         for i in range(len(addresses_pool))
         if i not in [0, 1, 2, 3, 4, 1999]
     ), "Everyone else should have no fees in normal round"
+
 
 def test_normal_round_no_majority(verbose, debug):
     """Test normal round with no majority (2 Agree, 2 Disagree, 1 Timeout)."""
@@ -219,9 +225,11 @@ def test_normal_round_no_majority(verbose, debug):
     if verbose:
         display_test_description(
             test_name="test_normal_round_no_majority",
-            test_description="This test verifies the fee distribution for a normal round with no majority (2 Agree, 2 Disagree, 1 Timeout)."
+            test_description="This test verifies the fee distribution for a normal round with no majority (2 Agree, 2 Disagree, 1 Timeout).",
         )
-        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_summary_table(
+            fee_events, transaction_results, transaction_budget, round_labels
+        )
         display_transaction_results(transaction_results, round_labels)
 
     if debug:
@@ -288,9 +296,11 @@ def test_normal_round_no_majority_disagree(verbose, debug):
     if verbose:
         display_test_description(
             test_name="test_normal_round_no_majority_disagree",
-            test_description="This test verifies the fee distribution for a normal round with no majority (2 Agree, 3 Disagree)."
+            test_description="This test verifies the fee distribution for a normal round with no majority (2 Agree, 3 Disagree).",
         )
-        display_summary_table(fee_events, transaction_results, transaction_budget, round_labels)
+        display_summary_table(
+            fee_events, transaction_results, transaction_budget, round_labels
+        )
         display_transaction_results(transaction_results, round_labels)
 
     if debug:

@@ -1,6 +1,11 @@
 from typing import List
 from tabulate import tabulate
-from fee_simulator.models import TransactionRoundResults, FeeEvent, TransactionBudget, RoundLabel
+from fee_simulator.models import (
+    TransactionRoundResults,
+    FeeEvent,
+    TransactionBudget,
+    RoundLabel,
+)
 from fee_simulator.display.utils import (
     Colors,
     ROUND_LABEL_COLORS,
@@ -21,6 +26,7 @@ from fee_simulator.fee_aggregators.address_metrics import (
     compute_all_zeros,
 )
 from fee_simulator.constants import DEFAULT_STAKE
+
 
 def display_summary_table(
     fee_events: List[FeeEvent],
@@ -43,7 +49,8 @@ def display_summary_table(
 
     # Collect active addresses
     active_addresses = {
-        event.address for event in fee_events
+        event.address
+        for event in fee_events
         if not compute_all_zeros(fee_events, event.address)
     }
 
@@ -58,24 +65,35 @@ def display_summary_table(
             for addr, vote in rotation.votes.items():
                 if addr not in active_addresses:
                     continue
-                is_leader = isinstance(vote, list) and vote[0] in ["LEADER_RECEIPT", "LEADER_TIMEOUT"]
+                is_leader = isinstance(vote, list) and vote[0] in [
+                    "LEADER_RECEIPT",
+                    "LEADER_TIMEOUT",
+                ]
                 vote_display, vote_type = format_vote(vote, is_leader)
                 vote_color = VOTE_TYPE_COLORS.get(vote_type, Colors.ENDC)
                 if is_leader:
                     vote_color = Colors.CYAN
-                votes_per_address[addr][round_idx] = Colors.colorize(vote_display, vote_color)
+                votes_per_address[addr][round_idx] = Colors.colorize(
+                    vote_display, vote_color
+                )
 
     # Step 2: Collect votes from fee_events (merge with transaction_results votes)
     for addr in active_addresses:
         for event in fee_events:
-            if event.address == addr and event.round_index is not None and event.vote is not None:
+            if (
+                event.address == addr
+                and event.round_index is not None
+                and event.vote is not None
+            ):
                 round_idx = event.round_index
                 is_leader = event.role == "LEADER"
                 vote_display, vote_type = format_vote(event.vote, is_leader)
                 vote_color = VOTE_TYPE_COLORS.get(vote_type, Colors.ENDC)
                 if is_leader:
                     vote_color = Colors.CYAN
-                votes_per_address[addr][round_idx] = Colors.colorize(vote_display, vote_color)
+                votes_per_address[addr][round_idx] = Colors.colorize(
+                    vote_display, vote_color
+                )
 
     # Main summary table
     headers = [
@@ -102,15 +120,32 @@ def display_summary_table(
 
     for addr in sorted(active_addresses):
         addr_short = format_address(addr)
-        roles = {event.role for event in fee_events if event.address == addr and event.role is not None}
-        role_display = ", ".join(Colors.colorize(role, ROLE_COLORS.get(role, Colors.ENDC)) for role in sorted(roles)) if roles else "NONE"
+        roles = {
+            event.role
+            for event in fee_events
+            if event.address == addr and event.role is not None
+        }
+        role_display = (
+            ", ".join(
+                Colors.colorize(role, ROLE_COLORS.get(role, Colors.ENDC))
+                for role in sorted(roles)
+            )
+            if roles
+            else "NONE"
+        )
         cost = compute_total_costs(fee_events, addr)
         earned = compute_total_earnings(fee_events, addr)
         slashed = compute_total_slashed(fee_events, addr)
         burned = compute_total_burnt(fee_events, addr)
         staked = compute_current_stake(addr, fee_events)
         net = earned - cost - slashed - burned
-        rounds = sorted({event.round_index for event in fee_events if event.address == addr and event.round_index is not None})
+        rounds = sorted(
+            {
+                event.round_index
+                for event in fee_events
+                if event.address == addr and event.round_index is not None
+            }
+        )
 
         if staked < (DEFAULT_STAKE * 0.99):
             addr_short += Colors.colorize(" [SLASHED]", Colors.RED)
@@ -122,18 +157,20 @@ def display_summary_table(
             votes_display.append(f"Round {round_idx}: {vote}")
         votes_str = ", ".join(votes_display) if votes_display else "-"
 
-        table_data.append([
-            addr_short,
-            role_display,
-            colorize_financial(cost, negative_color=Colors.RED),
-            colorize_financial(earned, positive_color=Colors.GREEN),
-            colorize_financial(slashed, negative_color=Colors.RED),
-            colorize_financial(burned, negative_color=Colors.RED),
-            colorize_financial(staked, positive_color=Colors.BLUE),
-            colorize_financial(net),
-            ", ".join(str(r) for r in rounds) if rounds else "-",
-            votes_str,
-        ])
+        table_data.append(
+            [
+                addr_short,
+                role_display,
+                colorize_financial(cost, negative_color=Colors.RED),
+                colorize_financial(earned, positive_color=Colors.GREEN),
+                colorize_financial(slashed, negative_color=Colors.RED),
+                colorize_financial(burned, negative_color=Colors.RED),
+                colorize_financial(staked, positive_color=Colors.BLUE),
+                colorize_financial(net),
+                ", ".join(str(r) for r in rounds) if rounds else "-",
+                votes_str,
+            ]
+        )
 
         totals["cost"] += cost
         totals["earned"] += earned
@@ -143,43 +180,77 @@ def display_summary_table(
         totals["net"] += net
 
     # Add totals row
-    table_data.append([
-        Colors.BOLD + "TOTAL" + Colors.ENDC,
-        "-",
-        colorize_financial(totals["cost"], negative_color=Colors.RED),
-        colorize_financial(totals["earned"], positive_color=Colors.GREEN),
-        colorize_financial(totals["slashed"], negative_color=Colors.RED),
-        colorize_financial(totals["burned"], negative_color=Colors.RED),
-        colorize_financial(totals["staked"], positive_color=Colors.BLUE),
-        colorize_financial(totals["net"]),
-        "-",
-        "-",
-    ])
+    table_data.append(
+        [
+            Colors.BOLD + "TOTAL" + Colors.ENDC,
+            "-",
+            colorize_financial(totals["cost"], negative_color=Colors.RED),
+            colorize_financial(totals["earned"], positive_color=Colors.GREEN),
+            colorize_financial(totals["slashed"], negative_color=Colors.RED),
+            colorize_financial(totals["burned"], negative_color=Colors.RED),
+            colorize_financial(totals["staked"], positive_color=Colors.BLUE),
+            colorize_financial(totals["net"]),
+            "-",
+            "-",
+        ]
+    )
 
     # Display the main summary table using the original create_table
     create_table(headers=headers, data=table_data)
 
     # Budget summary table
     budget_data = [
-        ["Leader Timeout", Colors.colorize(str(transaction_budget.leaderTimeout), Colors.CYAN)],
-        ["Validators Timeout", Colors.colorize(str(transaction_budget.validatorsTimeout), Colors.CYAN)],
-        ["Appeal Rounds", Colors.colorize(str(transaction_budget.appealRounds), Colors.CYAN)],
+        [
+            "Leader Timeout",
+            Colors.colorize(str(transaction_budget.leaderTimeout), Colors.CYAN),
+        ],
+        [
+            "Validators Timeout",
+            Colors.colorize(str(transaction_budget.validatorsTimeout), Colors.CYAN),
+        ],
+        [
+            "Appeal Rounds",
+            Colors.colorize(str(transaction_budget.appealRounds), Colors.CYAN),
+        ],
         ["Sender Address", format_address(transaction_budget.senderAddress)],
     ]
     if transaction_budget.appeals:
-        budget_data.append(["Appeals", ", ".join(format_address(a.appealantAddress) for a in transaction_budget.appeals)])
-    budget_table = _create_table_rows(headers=["PARAMETER", "VALUE"], data=budget_data, title="Transaction Budget Summary")
+        budget_data.append(
+            [
+                "Appeals",
+                ", ".join(
+                    format_address(a.appealantAddress)
+                    for a in transaction_budget.appeals
+                ),
+            ]
+        )
+    budget_table = _create_table_rows(
+        headers=["PARAMETER", "VALUE"],
+        data=budget_data,
+        title="Transaction Budget Summary",
+    )
 
     # Round labels table
     round_data = [
         [i, Colors.colorize(label, ROUND_LABEL_COLORS.get(label, Colors.YELLOW))]
         for i, label in enumerate(round_labels)
     ]
-    round_table = _create_table_rows(headers=["ROUND", "LABEL"], data=round_data, title="Round Labels")
+    round_table = _create_table_rows(
+        headers=["ROUND", "LABEL"], data=round_data, title="Round Labels"
+    )
 
     # Remove the title rows from budget_table and round_table for alignment
-    budget_table_rows = budget_table[1:] if budget_table and budget_table[0].startswith(f"{Colors.BOLD}Transaction Budget Summary:") else budget_table
-    round_table_rows = round_table[1:] if round_table and round_table[0].startswith(f"{Colors.BOLD}Round Labels:") else round_table
+    budget_table_rows = (
+        budget_table[1:]
+        if budget_table
+        and budget_table[0].startswith(f"{Colors.BOLD}Transaction Budget Summary:")
+        else budget_table
+    )
+    round_table_rows = (
+        round_table[1:]
+        if round_table and round_table[0].startswith(f"{Colors.BOLD}Round Labels:")
+        else round_table
+    )
 
     # Print titles side by side
     titles = [f"{Colors.BOLD}Transaction Budget Summary:{Colors.ENDC}"]
@@ -191,7 +262,9 @@ def display_summary_table(
 
     # Pad shorter tables with empty strings to align them
     budget_width = len(budget_table_rows[0]) if budget_table_rows else 0
-    budget_table_rows.extend([" " * budget_width] * (max_height - len(budget_table_rows)))
+    budget_table_rows.extend(
+        [" " * budget_width] * (max_height - len(budget_table_rows))
+    )
 
     round_width = len(round_table_rows[0]) if round_table_rows else 0
     round_table_rows.extend([" " * round_width] * (max_height - len(round_table_rows)))
